@@ -3,29 +3,25 @@ session_start();
 require_once '../../include/conn/conn.php';
 
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header('Location: ../index.php');
     exit;
 }
 
-// Handle delete
+
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     $teacher_id = intval($_GET['delete']);
     
-    // Check if teacher has allocations
     $check_allocations = mysqli_query($conn, "SELECT id FROM teacher_subjects WHERE teacher_id = $teacher_id LIMIT 1");
     $check_timetable = mysqli_query($conn, "SELECT id FROM timetable WHERE teacher_id = $teacher_id LIMIT 1");
     
     if (mysqli_num_rows($check_allocations) > 0 || mysqli_num_rows($check_timetable) > 0) {
         $error = "Cannot delete teacher. They have subject allocations or timetable entries.";
     } else {
-        // Get user_id first
         $get_user = mysqli_query($conn, "SELECT user_id FROM teachers WHERE id = $teacher_id");
         if ($get_user && mysqli_num_rows($get_user) > 0) {
             $user = mysqli_fetch_assoc($get_user);
             $user_id = $user['user_id'];
-            // Delete from users (cascade will delete teacher)
             mysqli_query($conn, "DELETE FROM users WHERE id = $user_id");
         }
     }
@@ -33,7 +29,18 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     exit;
 }
 
-// Fetch all teachers with user details
+$full_name = $_SESSION['full_name'];
+
+$pending_leaves = mysqli_fetch_assoc(mysqli_query($conn, 
+    "SELECT COUNT(*) as count FROM leave_requests WHERE status='pending'"
+))['count'];
+
+$pending_modifies = mysqli_fetch_assoc(mysqli_query($conn, 
+    "SELECT COUNT(*) as count FROM modify_requests WHERE status='pending'"
+))['count'];
+
+
+
 $teachers = mysqli_query($conn, "
     SELECT t.*, u.full_name, u.email, u.username 
     FROM teachers t 
@@ -266,7 +273,7 @@ $teachers = mysqli_query($conn, "
 </head>
 <body>
     <!-- SIDEBAR -->
-    <div class="sidebar">
+    <!-- <div class="sidebar">
         <div class="sidebar-header">
             <h2>
                 <span class="logo-shapes">
@@ -327,8 +334,133 @@ $teachers = mysqli_query($conn, "
         <div class="sidebar-footer">
             <a href="../logout.php" class="logout-btn">🚪 LOGOUT</a>
         </div>
-    </div>
+    </div> -->
 
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>
+                <span class="logo-shapes">
+                    <span class="circle"></span>
+                    <span class="square"></span>
+                    <span class="triangle"></span>
+                </span>
+                ADMIN PANEL
+            </h2>
+        </div>
+
+        <div class="admin-info">
+            <div class="admin-name">👤 <?php echo htmlspecialchars($full_name); ?></div>
+            <span class="admin-role">⚙️ ADMINISTRATOR</span>
+        </div>
+
+        <div class="nav-menu">
+            <div class="nav-section">
+                <div class="nav-section-title">MAIN</div>
+                <a href="dashboard.php" class="nav-item active">
+                    <span class="icon">📊</span>
+                    Dashboard
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">MANAGEMENT</div>
+                <a href="teachers.php" class="nav-item">
+                    <span class="icon">👨‍🏫</span>
+                    Teachers
+                </a>
+                <a href="students.php" class="nav-item">
+                    <span class="icon">🎓</span>
+                    Students
+                </a>
+                <a href="classes.php" class="nav-item">
+                    <span class="icon">🏫</span>
+                    Classes
+                </a>
+                <a href="subjects.php" class="nav-item">
+                    <span class="icon">📚</span>
+                    Subjects
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">ADD NEW</div>
+                <a href="add_teacher.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Teacher
+                </a>
+                <a href="add_student.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Student
+                </a>
+                <a href="add_class.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Class
+                </a>
+                <a href="add_subject.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Subject
+                </a>
+                <a href="add_time_slot.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Time Slot
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">REQUESTS</div>
+                <a href="leave_requests.php" class="nav-item red">
+                    <span class="icon">✈️</span>
+                    Leave Requests
+                    <?php if($pending_leaves > 0): ?>
+                        <span class="badge"><?php echo $pending_leaves; ?></span>
+                    <?php endif; ?>
+                </a>
+                <a href="modify_requests.php" class="nav-item red">
+                    <span class="icon">🔄</span>
+                    Modify Requests
+                    <?php if($pending_modifies > 0): ?>
+                        <span class="badge"><?php echo $pending_modifies; ?></span>
+                    <?php endif; ?>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">TIMETABLE</div>
+                <a href="view_timetable.php" class="nav-item">
+                    <span class="icon">👁️</span>
+                    View Timetable
+                </a>
+                <a href="generate_timetable.php" class="nav-item">
+                    <span class="icon">⚡</span>
+                    Generate Timetable
+                </a>
+                <a href="lock_timetable.php" class="nav-item">
+                    <span class="icon">🔒</span>
+                    Lock Timetable
+                </a>
+                <!-- <a href="allocations.php" class="nav-item">
+                    <span class="icon">📊</span>
+                    Teacher Allocations
+                </a> -->
+            </div>
+
+            <!-- <div class="nav-section">
+                <div class="nav-section-title">SETTINGS</div>
+                <a href="time_slots.php" class="nav-item">
+                    <span class="icon">⏰</span>
+                    Time Slots
+                </a>
+                <a href="profile.php" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    Profile Settings
+                </a>
+            </div> -->
+        </div>
+
+        <div class="sidebar-footer">
+            <a href="../logout.php" class="logout-btn">🚪 LOGOUT</a>
+        </div>
+    </div>
     <!-- MAIN CONTENT -->
     <div class="main-content">
         <div class="content-header">

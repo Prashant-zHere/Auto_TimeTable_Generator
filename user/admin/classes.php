@@ -23,6 +23,17 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     exit;
 }
 
+$full_name = $_SESSION['full_name'];
+
+$pending_leaves = mysqli_fetch_assoc(mysqli_query($conn, 
+    "SELECT COUNT(*) as count FROM leave_requests WHERE status='pending'"
+))['count'];
+
+$pending_modifies = mysqli_fetch_assoc(mysqli_query($conn, 
+    "SELECT COUNT(*) as count FROM modify_requests WHERE status='pending'"
+))['count'];
+
+
 $classes = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name");
 ?>
 <!DOCTYPE html>
@@ -231,8 +242,7 @@ $classes = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name");
     </style>
 </head>
 <body>
-    <!-- SIDEBAR -->
-    <div class="sidebar">
+    <!-- <div class="sidebar">
         <div class="sidebar-header">
             <h2>
                 <span class="logo-shapes">
@@ -293,9 +303,135 @@ $classes = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name");
         <div class="sidebar-footer">
             <a href="../logout.php" class="logout-btn">🚪 LOGOUT</a>
         </div>
-    </div>
+    </div> -->
 
-    <!-- MAIN CONTENT -->
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>
+                <span class="logo-shapes">
+                    <span class="circle"></span>
+                    <span class="square"></span>
+                    <span class="triangle"></span>
+                </span>
+                ADMIN PANEL
+            </h2>
+        </div>
+
+        <div class="admin-info">
+            <div class="admin-name">👤 <?php echo htmlspecialchars($full_name); ?></div>
+            <span class="admin-role">⚙️ ADMINISTRATOR</span>
+        </div>
+
+        <div class="nav-menu">
+            <div class="nav-section">
+                <div class="nav-section-title">MAIN</div>
+                <a href="dashboard.php" class="nav-item active">
+                    <span class="icon">📊</span>
+                    Dashboard
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">MANAGEMENT</div>
+                <a href="teachers.php" class="nav-item">
+                    <span class="icon">👨‍🏫</span>
+                    Teachers
+                </a>
+                <a href="students.php" class="nav-item">
+                    <span class="icon">🎓</span>
+                    Students
+                </a>
+                <a href="classes.php" class="nav-item">
+                    <span class="icon">🏫</span>
+                    Classes
+                </a>
+                <a href="subjects.php" class="nav-item">
+                    <span class="icon">📚</span>
+                    Subjects
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">ADD NEW</div>
+                <a href="add_teacher.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Teacher
+                </a>
+                <a href="add_student.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Student
+                </a>
+                <a href="add_class.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Class
+                </a>
+                <a href="add_subject.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Subject
+                </a>
+                <a href="add_time_slot.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Time Slot
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">REQUESTS</div>
+                <a href="leave_requests.php" class="nav-item red">
+                    <span class="icon">✈️</span>
+                    Leave Requests
+                    <?php if($pending_leaves > 0): ?>
+                        <span class="badge"><?php echo $pending_leaves; ?></span>
+                    <?php endif; ?>
+                </a>
+                <a href="modify_requests.php" class="nav-item red">
+                    <span class="icon">🔄</span>
+                    Modify Requests
+                    <?php if($pending_modifies > 0): ?>
+                        <span class="badge"><?php echo $pending_modifies; ?></span>
+                    <?php endif; ?>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">TIMETABLE</div>
+                <a href="view_timetable.php" class="nav-item">
+                    <span class="icon">👁️</span>
+                    View Timetable
+                </a>
+                <a href="generate_timetable.php" class="nav-item">
+                    <span class="icon">⚡</span>
+                    Generate Timetable
+                </a>
+                <a href="lock_timetable.php" class="nav-item">
+                    <span class="icon">🔒</span>
+                    Lock Timetable
+                </a>
+                <!-- <a href="allocations.php" class="nav-item">
+                    <span class="icon">📊</span>
+                    Teacher Allocations
+                </a> -->
+            </div>
+
+            <!-- <div class="nav-section">
+                <div class="nav-section-title">SETTINGS</div>
+                <a href="time_slots.php" class="nav-item">
+                    <span class="icon">⏰</span>
+                    Time Slots
+                </a>
+                <a href="profile.php" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    Profile Settings
+                </a>
+            </div> -->
+        </div>
+
+        <div class="sidebar-footer">
+            <a href="../logout.php" class="logout-btn">🚪 LOGOUT</a>
+        </div>
+    </div>
+    
     <div class="main-content">
         <div class="content-header">
             <h1>🏫 MANAGE CLASSES</h1>
@@ -305,7 +441,6 @@ $classes = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name");
         </div>
 
         <?php
-        // Get statistics
         $total_classes = mysqli_num_rows($classes);
         $total_students = mysqli_fetch_assoc(mysqli_query($conn, "SELECT SUM(total_students) as total FROM classes"))['total'] ?? 0;
         $total_subjects = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT class_id) as count FROM subjects"))['count'] ?? 0;
@@ -335,12 +470,10 @@ $classes = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name");
             <?php if (mysqli_num_rows($classes) > 0): ?>
                 <?php while($class = mysqli_fetch_assoc($classes)): ?>
                     <?php
-                    // Get subject count for this class
                     $subject_count = mysqli_fetch_assoc(mysqli_query($conn, 
                         "SELECT COUNT(*) as count FROM subjects WHERE class_id = {$class['id']}"
                     ))['count'];
                     
-                    // Get student count for this class
                     $student_count = mysqli_fetch_assoc(mysqli_query($conn, 
                         "SELECT COUNT(*) as count FROM students WHERE class_id = {$class['id']}"
                     ))['count'];

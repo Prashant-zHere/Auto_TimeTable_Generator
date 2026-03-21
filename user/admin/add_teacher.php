@@ -24,19 +24,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_teacher'])) {
     if (empty($full_name) || empty($email) || empty($username) || empty($password) || empty($employee_id)) {
         $error = 'Please fill all required fields.';
     } else {
-        // Check if username or email exists
         $check = mysqli_query($conn, "SELECT id FROM users WHERE username='$username' OR email='$email'");
         if (mysqli_num_rows($check) > 0) {
             $error = 'Username or email already exists.';
         } else {
-            // Insert into users table
             $insert_user = "INSERT INTO users (username, password, email, full_name, role) 
                            VALUES ('$username', '$password', '$email', '$full_name', 'teacher')";
             
             if (mysqli_query($conn, $insert_user)) {
                 $user_id = mysqli_insert_id($conn);
                 
-                // Insert into teachers table
                 $insert_teacher = "INSERT INTO teachers (user_id, employee_id, department, qualification, experience, max_periods_per_day) 
                                  VALUES ($user_id, '$employee_id', '$department', '$qualification', $experience, $max_periods)";
                 
@@ -51,6 +48,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_teacher'])) {
         }
     }
 }
+
+$pending_leaves = mysqli_fetch_assoc(mysqli_query($conn, 
+    "SELECT COUNT(*) as count FROM leave_requests WHERE status='pending'"
+))['count'];
+
+$pending_modifies = mysqli_fetch_assoc(mysqli_query($conn, 
+    "SELECT COUNT(*) as count FROM modify_requests WHERE status='pending'"
+))['count'];
+
+$full_name = $_SESSION['full_name'];
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -233,7 +242,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_teacher'])) {
     </style>
 </head>
 <body>
-    <!-- SIDEBAR -->
     <div class="sidebar">
         <div class="sidebar-header">
             <h2>
@@ -247,24 +255,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_teacher'])) {
         </div>
 
         <div class="admin-info">
-            <div class="admin-name">👤 <?php echo htmlspecialchars($_SESSION['full_name']); ?></div>
+            <div class="admin-name">👤 <?php echo htmlspecialchars($full_name); ?></div>
             <span class="admin-role">⚙️ ADMINISTRATOR</span>
         </div>
 
         <div class="nav-menu">
-            <!-- MAIN -->
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item">
+                <a href="dashboard.php" class="nav-item active">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
             </div>
 
-            <!-- MANAGEMENT -->
             <div class="nav-section">
                 <div class="nav-section-title">MANAGEMENT</div>
-                <a href="teachers.php" class="nav-item active">
+                <a href="teachers.php" class="nav-item">
                     <span class="icon">👨‍🏫</span>
                     Teachers
                 </a>
@@ -282,10 +288,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_teacher'])) {
                 </a>
             </div>
 
-            <!-- ADD NEW -->
             <div class="nav-section">
                 <div class="nav-section-title">ADD NEW</div>
-                <a href="add_teacher.php" class="nav-item yellow active">
+                <a href="add_teacher.php" class="nav-item yellow">
                     <span class="icon">➕</span>
                     Add Teacher
                 </a>
@@ -301,22 +306,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_teacher'])) {
                     <span class="icon">➕</span>
                     Add Subject
                 </a>
+                <a href="add_time_slot.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Time Slot
+                </a>
             </div>
 
-            <!-- REQUESTS -->
             <div class="nav-section">
                 <div class="nav-section-title">REQUESTS</div>
                 <a href="leave_requests.php" class="nav-item red">
                     <span class="icon">✈️</span>
                     Leave Requests
+                    <?php if($pending_leaves > 0): ?>
+                        <span class="badge"><?php echo $pending_leaves; ?></span>
+                    <?php endif; ?>
                 </a>
                 <a href="modify_requests.php" class="nav-item red">
                     <span class="icon">🔄</span>
                     Modify Requests
+                    <?php if($pending_modifies > 0): ?>
+                        <span class="badge"><?php echo $pending_modifies; ?></span>
+                    <?php endif; ?>
                 </a>
             </div>
 
-            <!-- TIMETABLE -->
             <div class="nav-section">
                 <div class="nav-section-title">TIMETABLE</div>
                 <a href="view_timetable.php" class="nav-item">
@@ -331,18 +344,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_teacher'])) {
                     <span class="icon">🔒</span>
                     Lock Timetable
                 </a>
-                <a href="allocations.php" class="nav-item">
+                <!-- <a href="allocations.php" class="nav-item">
                     <span class="icon">📊</span>
                     Teacher Allocations
-                </a>
+                </a> -->
             </div>
+
+            <!-- <div class="nav-section">
+                <div class="nav-section-title">SETTINGS</div>
+                <a href="time_slots.php" class="nav-item">
+                    <span class="icon">⏰</span>
+                    Time Slots
+                </a>
+                <a href="profile.php" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    Profile Settings
+                </a>
+            </div> -->
         </div>
 
         <div class="sidebar-footer">
             <a href="../logout.php" class="logout-btn">🚪 LOGOUT</a>
         </div>
     </div>
-
     <!-- MAIN CONTENT -->
     <div class="main-content">
         <div class="content-header">

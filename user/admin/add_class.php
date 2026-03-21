@@ -29,6 +29,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_class'])) {
         }
     }
 }
+$full_name = $_SESSION['full_name'];
+
+
+$pending_leaves = mysqli_fetch_assoc(mysqli_query($conn, 
+    "SELECT COUNT(*) as count FROM leave_requests WHERE status='pending'"
+))['count'];
+
+$pending_modifies = mysqli_fetch_assoc(mysqli_query($conn, 
+    "SELECT COUNT(*) as count FROM modify_requests WHERE status='pending'"
+))['count'];
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -190,7 +202,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_class'])) {
     </style>
 </head>
 <body>
-    <!-- SIDEBAR -->
     <div class="sidebar">
         <div class="sidebar-header">
             <h2>
@@ -204,21 +215,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_class'])) {
         </div>
 
         <div class="admin-info">
-            <div class="admin-name">👤 <?php echo htmlspecialchars($_SESSION['full_name']); ?></div>
+            <div class="admin-name">👤 <?php echo htmlspecialchars($full_name); ?></div>
             <span class="admin-role">⚙️ ADMINISTRATOR</span>
         </div>
 
         <div class="nav-menu">
-            <!-- MAIN -->
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item">
+                <a href="dashboard.php" class="nav-item active">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
             </div>
 
-            <!-- MANAGEMENT -->
             <div class="nav-section">
                 <div class="nav-section-title">MANAGEMENT</div>
                 <a href="teachers.php" class="nav-item">
@@ -229,7 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_class'])) {
                     <span class="icon">🎓</span>
                     Students
                 </a>
-                <a href="classes.php" class="nav-item active">
+                <a href="classes.php" class="nav-item">
                     <span class="icon">🏫</span>
                     Classes
                 </a>
@@ -239,7 +248,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_class'])) {
                 </a>
             </div>
 
-            <!-- ADD NEW -->
             <div class="nav-section">
                 <div class="nav-section-title">ADD NEW</div>
                 <a href="add_teacher.php" class="nav-item yellow">
@@ -250,7 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_class'])) {
                     <span class="icon">➕</span>
                     Add Student
                 </a>
-                <a href="add_class.php" class="nav-item yellow active">
+                <a href="add_class.php" class="nav-item yellow">
                     <span class="icon">➕</span>
                     Add Class
                 </a>
@@ -258,22 +266,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_class'])) {
                     <span class="icon">➕</span>
                     Add Subject
                 </a>
+                <a href="add_time_slot.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Time Slot
+                </a>
             </div>
 
-            <!-- REQUESTS -->
             <div class="nav-section">
                 <div class="nav-section-title">REQUESTS</div>
                 <a href="leave_requests.php" class="nav-item red">
                     <span class="icon">✈️</span>
                     Leave Requests
+                    <?php if($pending_leaves > 0): ?>
+                        <span class="badge"><?php echo $pending_leaves; ?></span>
+                    <?php endif; ?>
                 </a>
                 <a href="modify_requests.php" class="nav-item red">
                     <span class="icon">🔄</span>
                     Modify Requests
+                    <?php if($pending_modifies > 0): ?>
+                        <span class="badge"><?php echo $pending_modifies; ?></span>
+                    <?php endif; ?>
                 </a>
             </div>
 
-            <!-- TIMETABLE -->
             <div class="nav-section">
                 <div class="nav-section-title">TIMETABLE</div>
                 <a href="view_timetable.php" class="nav-item">
@@ -288,7 +304,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_class'])) {
                     <span class="icon">🔒</span>
                     Lock Timetable
                 </a>
+                <!-- <a href="allocations.php" class="nav-item">
+                    <span class="icon">📊</span>
+                    Teacher Allocations
+                </a> -->
             </div>
+
+            <!-- <div class="nav-section">
+                <div class="nav-section-title">SETTINGS</div>
+                <a href="time_slots.php" class="nav-item">
+                    <span class="icon">⏰</span>
+                    Time Slots
+                </a>
+                <a href="profile.php" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    Profile Settings
+                </a>
+            </div> -->
         </div>
 
         <div class="sidebar-footer">
@@ -296,7 +328,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_class'])) {
         </div>
     </div>
 
-    <!-- MAIN CONTENT -->
     <div class="main-content">
         <div class="content-header">
             <h1>➕ ADD NEW CLASS</h1>

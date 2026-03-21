@@ -9,13 +9,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 
 $full_name = $_SESSION['full_name'];
 
-// Get statistics for dashboard
 $teachers_count = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM teachers"))['count'];
 $students_count = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM students"))['count'];
 $classes_count = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM classes"))['count'];
 $subjects_count = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as count FROM subjects"))['count'];
 
-// Get pending requests count
 $pending_leaves = mysqli_fetch_assoc(mysqli_query($conn, 
     "SELECT COUNT(*) as count FROM leave_requests WHERE status='pending'"
 ))['count'];
@@ -24,7 +22,6 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
     "SELECT COUNT(*) as count FROM modify_requests WHERE status='pending'"
 ))['count'];
 
-// Get recent leave requests
 $recent_leaves = mysqli_query($conn, 
     "SELECT lr.*, u.full_name as teacher_name 
      FROM leave_requests lr 
@@ -417,7 +414,6 @@ $recent_leaves = mysqli_query($conn,
     </style>
 </head>
 <body>
-    <!-- SIDEBAR -->
     <div class="sidebar">
         <div class="sidebar-header">
             <h2>
@@ -436,7 +432,6 @@ $recent_leaves = mysqli_query($conn,
         </div>
 
         <div class="nav-menu">
-            <!-- DASHBOARD -->
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
                 <a href="dashboard.php" class="nav-item active">
@@ -445,7 +440,6 @@ $recent_leaves = mysqli_query($conn,
                 </a>
             </div>
 
-            <!-- MANAGEMENT -->
             <div class="nav-section">
                 <div class="nav-section-title">MANAGEMENT</div>
                 <a href="teachers.php" class="nav-item">
@@ -466,7 +460,6 @@ $recent_leaves = mysqli_query($conn,
                 </a>
             </div>
 
-            <!-- ADD NEW -->
             <div class="nav-section">
                 <div class="nav-section-title">ADD NEW</div>
                 <a href="add_teacher.php" class="nav-item yellow">
@@ -491,7 +484,6 @@ $recent_leaves = mysqli_query($conn,
                 </a>
             </div>
 
-            <!-- REQUESTS -->
             <div class="nav-section">
                 <div class="nav-section-title">REQUESTS</div>
                 <a href="leave_requests.php" class="nav-item red">
@@ -510,7 +502,6 @@ $recent_leaves = mysqli_query($conn,
                 </a>
             </div>
 
-            <!-- TIMETABLE -->
             <div class="nav-section">
                 <div class="nav-section-title">TIMETABLE</div>
                 <a href="view_timetable.php" class="nav-item">
@@ -525,14 +516,13 @@ $recent_leaves = mysqli_query($conn,
                     <span class="icon">🔒</span>
                     Lock Timetable
                 </a>
-                <a href="allocations.php" class="nav-item">
+                <!-- <a href="allocations.php" class="nav-item">
                     <span class="icon">📊</span>
                     Teacher Allocations
-                </a>
+                </a> -->
             </div>
 
-            <!-- SETTINGS -->
-            <div class="nav-section">
+            <!-- <div class="nav-section">
                 <div class="nav-section-title">SETTINGS</div>
                 <a href="time_slots.php" class="nav-item">
                     <span class="icon">⏰</span>
@@ -542,7 +532,7 @@ $recent_leaves = mysqli_query($conn,
                     <span class="icon">⚙️</span>
                     Profile Settings
                 </a>
-            </div>
+            </div> -->
         </div>
 
         <div class="sidebar-footer">
@@ -550,7 +540,6 @@ $recent_leaves = mysqli_query($conn,
         </div>
     </div>
 
-    <!-- MAIN CONTENT -->
     <div class="main-content">
         <div class="content-header">
             <h1>DASHBOARD OVERVIEW</h1>
@@ -559,7 +548,6 @@ $recent_leaves = mysqli_query($conn,
             </div>
         </div>
 
-        <!-- Statistics Cards -->
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>👨‍🏫 TEACHERS</h3>
@@ -583,7 +571,6 @@ $recent_leaves = mysqli_query($conn,
             </div>
         </div>
 
-        <!-- Pending Requests Cards -->
         <div class="pending-grid">
             <div class="pending-card">
                 <div class="pending-header">
@@ -603,7 +590,6 @@ $recent_leaves = mysqli_query($conn,
             </div>
         </div>
 
-        <!-- Recent Leave Requests -->
         <div class="recent-section">
             <div class="recent-header">
                 <h2>📋 RECENT LEAVE REQUESTS</h2>
@@ -627,7 +613,6 @@ $recent_leaves = mysqli_query($conn,
             <?php endif; ?>
         </div>
 
-        <!-- Quick Actions -->
         <h3 style="margin-bottom: 15px;">⚡ QUICK ACTIONS</h3>
         <div class="quick-actions">
             <a href="add_teacher.php" class="quick-action-btn">➕ ADD TEACHER</a>
