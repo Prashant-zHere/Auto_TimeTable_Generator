@@ -2,7 +2,6 @@
 session_start();
 require_once '../../include/conn/conn.php';
 
-
 // Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header('Location: ../index.php');
@@ -12,56 +11,92 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 $error = '';
 $success = '';
 
-// Fetch classes for dropdown
-$classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes ORDER BY class_name");
+// Get teacher ID from URL
+$teacher_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_student'])) {
+if ($teacher_id == 0) {
+    header('Location: teachers.php');
+    exit;
+}
+
+// Fetch teacher details
+$teacher_query = mysqli_query($conn, "
+    SELECT t.*, u.id as user_id, u.username, u.email, u.full_name 
+    FROM teachers t 
+    JOIN users u ON t.user_id = u.id 
+    WHERE t.id = $teacher_id
+");
+
+$teacher = mysqli_fetch_assoc($teacher_query);
+
+if (!$teacher) {
+    header('Location: teachers.php');
+    exit;
+}
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_teacher'])) {
     $full_name = trim($_POST['full_name']);
     $email = trim($_POST['email']);
     $username = trim($_POST['username']);
+    $employee_id = trim($_POST['employee_id']);
+    $department = trim($_POST['department']);
+    $qualification = trim($_POST['qualification']);
+    $experience = intval($_POST['experience']);
+    $max_periods = intval($_POST['max_periods']);
     $password = $_POST['password'];
-    $student_id = trim($_POST['student_id']);
-    $class_id = !empty($_POST['class_id']) ? intval($_POST['class_id']) : 'NULL';
-    $semester = !empty($_POST['semester']) ? intval($_POST['semester']) : 'NULL';
-    $roll_number = trim($_POST['roll_number']);
 
-    if (empty($full_name) || empty($email) || empty($username) || empty($password) || empty($student_id)) {
+    if (empty($full_name) || empty($email) || empty($username) || empty($employee_id)) {
         $error = 'Please fill all required fields.';
     } else {
-        // Check if username or email exists
-        $check = mysqli_query($conn, "SELECT id FROM users WHERE username='$username' OR email='$email'");
+        // Check if username or email exists for other users
+        $check = mysqli_query($conn, "SELECT id FROM users WHERE (username='$username' OR email='$email') AND id != {$teacher['user_id']}");
         if (mysqli_num_rows($check) > 0) {
-            $error = 'Username or email already exists.';
+            $error = 'Username or email already exists for another user.';
         } else {
-            // Check if student ID already exists
-            $check_student = mysqli_query($conn, "SELECT id FROM students WHERE student_id='$student_id'");
-            if (mysqli_num_rows($check_student) > 0) {
-                $error = 'Student ID already exists.';
-            } else {
-                // Insert into users table
-                $insert_user = "INSERT INTO users (username, password, email, full_name, role) 
-                               VALUES ('$username', '$password', '$email', '$full_name', 'student')";
+            // Update users table
+            $update_user = "UPDATE users SET 
+                          username = '$username', 
+                          email = '$email', 
+                          full_name = '$full_name'";
+            
+            if (!empty($password)) {
+                $update_user .= ", password = '$password'";
+            }
+            
+            $update_user .= " WHERE id = {$teacher['user_id']}";
+            
+            if (mysqli_query($conn, $update_user)) {
+                // Update teachers table
+                $update_teacher = "UPDATE teachers SET 
+                                 employee_id = '$employee_id',
+                                 department = '$department',
+                                 qualification = '$qualification',
+                                 experience = $experience,
+                                 max_periods_per_day = $max_periods
+                                 WHERE id = $teacher_id";
                 
-                if (mysqli_query($conn, $insert_user)) {
-                    $user_id = mysqli_insert_id($conn);
-                    
-                    // Insert into students table
-                    $insert_student = "INSERT INTO students (user_id, student_id, class_id, semester, roll_number) 
-                                     VALUES ($user_id, '$student_id', $class_id, $semester, '$roll_number')";
-                    
-                    if (mysqli_query($conn, $insert_student)) {
-                        $success = 'Student added successfully!';
-                    } else {
-                        $error = 'Error adding student details: ' . mysqli_error($conn);
-                    }
+                if (mysqli_query($conn, $update_teacher)) {
+                    $success = 'Teacher information updated successfully!';
+                    // Refresh teacher data
+                    $teacher_query = mysqli_query($conn, "
+                        SELECT t.*, u.id as user_id, u.username, u.email, u.full_name 
+                        FROM teachers t 
+                        JOIN users u ON t.user_id = u.id 
+                        WHERE t.id = $teacher_id
+                    ");
+                    $teacher = mysqli_fetch_assoc($teacher_query);
                 } else {
-                    $error = 'Error creating user: ' . mysqli_error($conn);
+                    $error = 'Error updating teacher details: ' . mysqli_error($conn);
                 }
+            } else {
+                $error = 'Error updating user: ' . mysqli_error($conn);
             }
         }
     }
-
 }
+
+$full_name = $_SESSION['full_name'];
 
 
 $pending_leaves = mysqli_fetch_assoc(mysqli_query($conn, 
@@ -72,15 +107,13 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
     "SELECT COUNT(*) as count FROM modify_requests WHERE status='pending'"
 ))['count'];
 
-$full_name = $_SESSION['full_name'];
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Student · Admin</title>
+    <title>Edit Teacher · Admin</title>
     <link rel="stylesheet" href="../../include/css/style.css">
     <style>
         * {
@@ -113,8 +146,13 @@ $full_name = $_SESSION['full_name'];
             box-shadow: var(--shadow);
         }
 
+        .content-header h1 {
+            font-size: 28px;
+            font-weight: 900;
+        }
+
         .form-container {
-            max-width: 700px;
+            max-width: 800px;
             margin: 0 auto;
             border: 4px solid #000;
             background: var(--yellow);
@@ -166,10 +204,10 @@ $full_name = $_SESSION['full_name'];
             gap: 15px;
         }
 
-        .required-field::after {
-            content: " *";
-            color: var(--red);
-            font-weight: 900;
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
         }
 
         .submit-btn {
@@ -213,24 +251,8 @@ $full_name = $_SESSION['full_name'];
             box-shadow: 5px 5px 0 #000;
         }
 
-        .error-box {
-            background: var(--red);
-            color: white;
-            padding: 12px;
-            border: 3px solid #000;
+        .error-box, .success-box {
             margin-bottom: 20px;
-            font-weight: 800;
-            box-shadow: var(--shadow);
-        }
-
-        .success-box {
-            background: var(--green);
-            color: white;
-            padding: 12px;
-            border: 3px solid #000;
-            margin-bottom: 20px;
-            font-weight: 800;
-            box-shadow: var(--shadow);
         }
 
         .info-text {
@@ -238,10 +260,16 @@ $full_name = $_SESSION['full_name'];
             color: #666;
             margin-top: 5px;
         }
+
+        .required-field::after {
+            content: " *";
+            color: var(--red);
+            font-weight: 900;
+        }
     </style>
 </head>
 <body>
- <div class="sidebar">
+    <div class="sidebar">
         <div class="sidebar-header">
             <h2>
                 <span class="logo-shapes">
@@ -261,7 +289,7 @@ $full_name = $_SESSION['full_name'];
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item">
+                <a href="dashboard.php" class="nav-item active">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -301,7 +329,7 @@ $full_name = $_SESSION['full_name'];
                     <span class="icon">➕</span>
                     Add Class
                 </a>
-                <a href="add_subject.php" class="nav-item yellow active">
+                <a href="add_subject.php" class="nav-item yellow">
                     <span class="icon">➕</span>
                     Add Subject
                 </a>
@@ -368,106 +396,88 @@ $full_name = $_SESSION['full_name'];
     </div>
     <div class="main-content">
         <div class="content-header">
-            <h1>➕ ADD NEW STUDENT</h1>
+            <h1>✏️ EDIT TEACHER</h1>
             <div class="date-display">
                 <?php echo date('l, d M Y'); ?>
             </div>
         </div>
 
         <div class="form-container">
-            <h2>🎓 STUDENT DETAILS</h2>
+            <h2>👨‍🏫 <?php echo htmlspecialchars($teacher['full_name']); ?></h2>
             
             <?php if ($error): ?>
-                <div class="error-box"><?php echo $error; ?></div>
+                <div class="error-box"><?php echo htmlspecialchars($error); ?></div>
             <?php endif; ?>
             
             <?php if ($success): ?>
-                <div class="success-box"><?php echo $success; ?></div>
+                <div class="success-box"><?php echo htmlspecialchars($success); ?></div>
             <?php endif; ?>
 
             <form method="post" action="">
+                <div class="form-group">
+                    <label class="required-field">👤 FULL NAME</label>
+                    <input type="text" name="full_name" required value="<?php echo htmlspecialchars($teacher['full_name']); ?>">
+                </div>
+
                 <div class="form-row">
-                    <div class="form-group">
-                        <label class="required-field">👤 FULL NAME</label>
-                        <input type="text" name="full_name" placeholder="Enter student's full name" required 
-                               value="<?php echo isset($_POST['full_name']) ? htmlspecialchars($_POST['full_name']) : ''; ?>">
-                    </div>
                     <div class="form-group">
                         <label class="required-field">📧 EMAIL</label>
-                        <input type="email" name="email" placeholder="student@college.edu" required 
-                               value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
+                        <input type="email" name="email" required value="<?php echo htmlspecialchars($teacher['email']); ?>">
                     </div>
-                </div>
-
-                <div class="form-row">
                     <div class="form-group">
                         <label class="required-field">👥 USERNAME</label>
-                        <input type="text" name="username" placeholder="login username" required 
-                               value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>">
-                    </div>
-                    <div class="form-group">
-                        <label class="required-field">🔒 PASSWORD</label>
-                        <input type="password" name="password" placeholder="••••••••" required>
+                        <input type="text" name="username" required value="<?php echo htmlspecialchars($teacher['username']); ?>">
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="required-field">🆔 STUDENT ID</label>
-                        <input type="text" name="student_id" placeholder="e.g., STU001" required 
-                               value="<?php echo isset($_POST['student_id']) ? htmlspecialchars($_POST['student_id']) : ''; ?>">
+                        <label>🔒 PASSWORD</label>
+                        <input type="password" name="password" placeholder="Leave blank to keep current password">
+                        <div class="info-text">Leave empty to keep current password</div>
                     </div>
                     <div class="form-group">
-                        <label>🔢 ROLL NUMBER</label>
-                        <input type="text" name="roll_number" placeholder="e.g., 2024001" 
-                               value="<?php echo isset($_POST['roll_number']) ? htmlspecialchars($_POST['roll_number']) : ''; ?>">
+                        <label class="required-field">🆔 EMPLOYEE ID</label>
+                        <input type="text" name="employee_id" required value="<?php echo htmlspecialchars($teacher['employee_id']); ?>">
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>🏫 CLASS</label>
-                        <select name="class_id" id="classSelect">
-                            <option value="">-- Not Assigned --</option>
-                            <?php while($class = mysqli_fetch_assoc($classes)): ?>
-                                <option value="<?php echo $class['id']; ?>" 
-                                    data-semester="<?php echo $class['semester']; ?>"
-                                    <?php echo (isset($_POST['class_id']) && $_POST['class_id'] == $class['id']) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($class['class_name']); ?>
-                                </option>
-                            <?php endwhile; ?>
+                        <label>🏢 DEPARTMENT</label>
+                        <select name="department">
+                            <option value="Computer Science" <?php echo $teacher['department'] == 'Computer Science' ? 'selected' : ''; ?>>Computer Science</option>
+                            <option value="Information Technology" <?php echo $teacher['department'] == 'Information Technology' ? 'selected' : ''; ?>>Information Technology</option>
+                            <option value="Electronics" <?php echo $teacher['department'] == 'Electronics' ? 'selected' : ''; ?>>Electronics</option>
+                            <option value="Mechanical" <?php echo $teacher['department'] == 'Mechanical' ? 'selected' : ''; ?>>Mechanical</option>
+                            <option value="Civil" <?php echo $teacher['department'] == 'Civil' ? 'selected' : ''; ?>>Civil</option>
+                            <option value="Mathematics" <?php echo $teacher['department'] == 'Mathematics' ? 'selected' : ''; ?>>Mathematics</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>🔢 SEMESTER</label>
-                        <input type="number" name="semester" id="semesterInput" min="1" max="8" 
-                               value="<?php echo isset($_POST['semester']) ? $_POST['semester'] : ''; ?>">
+                        <label>🎓 QUALIFICATION</label>
+                        <input type="text" name="qualification" value="<?php echo htmlspecialchars($teacher['qualification']); ?>">
                     </div>
                 </div>
 
-                <div class="info-text">
-                    <span class="required-field">*</span> Required fields
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label>📊 EXPERIENCE (years)</label>
+                        <input type="number" name="experience" min="0" max="50" value="<?php echo $teacher['experience']; ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>⏰ MAX PERIODS/DAY</label>
+                        <input type="number" name="max_periods" min="1" max="8" value="<?php echo $teacher['max_periods_per_day']; ?>">
+                    </div>
                 </div>
 
-                <button type="submit" name="add_student" class="submit-btn">ADD STUDENT →</button>
+                <button type="submit" name="update_teacher" class="submit-btn">💾 UPDATE TEACHER</button>
             </form>
 
             <div class="back-link">
-                <a href="students.php">← BACK TO STUDENTS</a>
+                <a href="teachers.php">← BACK TO TEACHERS</a>
             </div>
         </div>
     </div>
-
-    <script>
-        document.getElementById('classSelect').addEventListener('change', function() {
-            let selectedOption = this.options[this.selectedIndex];
-            if (selectedOption.value) {
-                let semester = selectedOption.getAttribute('data-semester');
-                document.getElementById('semesterInput').value = semester;
-            } else {
-                document.getElementById('semesterInput').value = '';
-            }
-        });
-    </script>
 </body>
 </html>

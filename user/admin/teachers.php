@@ -553,8 +553,8 @@ $teachers = mysqli_query($conn, "
                         </div>
 
                         <div class="teacher-actions">
-                            <a href="view_teacher.php?id=<?php echo $teacher['id']; ?>" class="action-btn view-btn">👁️ VIEW</a>
-                            <a href="allocate_subjects.php?teacher_id=<?php echo $teacher['id']; ?>" class="action-btn allocate-btn">📚 ALLOCATE</a>
+                            <!-- <a href="view_teacher.php?id=<?php echo $teacher['id']; ?>" class="action-btn view-btn">👁️ VIEW</a> -->
+                            <!-- <a href="allocate_subjects.php?teacher_id=<?php echo $teacher['id']; ?>" class="action-btn allocate-btn">📚 ALLOCATE</a> -->
                             <a href="edit_teacher.php?id=<?php echo $teacher['id']; ?>" class="action-btn edit-btn">✏️ EDIT</a>
                             <a href="?delete=<?php echo $teacher['id']; ?>" class="action-btn delete-btn" 
                                onclick="return confirm('Delete this teacher? This will remove all associated data.')">🗑️ DEL</a>

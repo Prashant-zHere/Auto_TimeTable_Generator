@@ -222,7 +222,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -258,7 +258,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
                     <span class="icon">➕</span>
                     Add Student
                 </a>
-                <a href="add_class.php" class="nav-item yellow">
+                <a href="add_class.php" class="nav-item yellow active">
                     <span class="icon">➕</span>
                     Add Class
                 </a>

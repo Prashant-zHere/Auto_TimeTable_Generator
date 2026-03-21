@@ -8,6 +8,105 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     exit;
 }
 
+// Handle CSV Export
+if (isset($_GET['export']) && $_GET['export'] == 'csv' && isset($_GET['class_id'])) {
+    $export_class_id = intval($_GET['class_id']);
+    
+    // Get class info
+    $class_query = mysqli_query($conn, "SELECT class_name FROM classes WHERE id = $export_class_id");
+    $class_data = mysqli_fetch_assoc($class_query);
+    $class_name = $class_data['class_name'];
+    
+    // Get time slots
+    $slots_query = mysqli_query($conn, "
+        SELECT * FROM time_slots 
+        WHERE class_id = $export_class_id 
+        ORDER BY slot_number
+    ");
+    $time_slots = [];
+    while($slot = mysqli_fetch_assoc($slots_query)) {
+        $time_slots[$slot['id']] = $slot;
+    }
+    
+    // Get timetable data
+    $timetable_query = mysqli_query($conn, "
+        SELECT 
+            t.*, 
+            s.subject_name, s.subject_code,
+            u.full_name as teacher_name,
+            ts.start_time, ts.end_time, ts.slot_number, ts.is_break as slot_is_break
+        FROM timetable t
+        LEFT JOIN subjects s ON t.subject_id = s.id
+        LEFT JOIN teachers tea ON t.teacher_id = tea.id
+        LEFT JOIN users u ON tea.user_id = u.id
+        JOIN time_slots ts ON t.slot_id = ts.id
+        WHERE t.class_id = $export_class_id
+        ORDER BY t.day_of_week, ts.slot_number
+    ");
+    
+    $timetable_data = [];
+    while($row = mysqli_fetch_assoc($timetable_query)) {
+        $day = $row['day_of_week'];
+        $slot_id = $row['slot_id'];
+        $timetable_data[$day][$slot_id] = $row;
+    }
+    
+    $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    // Set headers for CSV download
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="timetable_' . $class_name . '_' . date('Y-m-d') . '.csv"');
+    
+    // Create output stream
+    $output = fopen('php://output', 'w');
+    
+    // Add UTF-8 BOM for Excel compatibility
+    fwrite($output, "\xEF\xBB\xBF");
+    
+    // Write header row
+    $headers = ['Time / Day'];
+    foreach($days as $day) {
+        $headers[] = $day;
+    }
+    fputcsv($output, $headers);
+    
+    // Write data rows
+    foreach($time_slots as $slot_id => $slot) {
+        $row = [];
+        // Time slot column
+        $time_text = 'Slot ' . $slot['slot_number'] . "\n" . 
+                     date('H:i', strtotime($slot['start_time'])) . '-' . 
+                     date('H:i', strtotime($slot['end_time']));
+        if($slot['is_break']) {
+            $time_text .= ' (BREAK)';
+        }
+        $row[] = $time_text;
+        
+        // Each day column
+        for($day = 1; $day <= 6; $day++) {
+            if(isset($timetable_data[$day][$slot_id])) {
+                $period = $timetable_data[$day][$slot_id];
+                if($period['slot_is_break']) {
+                    $row[] = 'BREAK';
+                } elseif($period['subject_id']) {
+                    $cell_text = $period['subject_code'] . "\n" . 
+                                 $period['subject_name'] . "\n" . 
+                                 ($period['teacher_name'] ?? 'Not Assigned');
+                    $row[] = $cell_text;
+                } else {
+                    $row[] = 'EMPTY';
+                }
+            } else {
+                $row[] = '';
+            }
+        }
+        fputcsv($output, $row);
+    }
+    
+    fclose($output);
+    exit;
+}
+
 // Get selected class from URL or default to first class
 $selected_class = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
 $selected_view = isset($_GET['view']) ? $_GET['view'] : 'weekly'; // weekly or teacher
@@ -144,8 +243,7 @@ if ($selected_class > 0 && !empty($timetable_data)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Timetable · Admin</title>
-        <link rel="stylesheet" href="../../include/css/style.css">
-
+    <link rel="stylesheet" href="../../include/css/style.css">
     <style>
         * {
             margin: 0;
@@ -301,6 +399,8 @@ if ($selected_class > 0 && !empty($timetable_data)) {
             text-decoration: none;
             color: white;
             transition: all 0.1s ease;
+            cursor: pointer;
+            display: inline-block;
         }
 
         .edit-btn {
@@ -403,29 +503,13 @@ if ($selected_class > 0 && !empty($timetable_data)) {
             border: 1px solid #000;
             font-size: 10px;
             margin-top: 3px;
-            border-radius: 0;
         }
 
-        .type-theory { 
-            background: var(--blue); 
-            color: white; 
-        }
-        .type-lab { 
-            background: var(--green); 
-            color: white; 
-        }
-        .type-practical { 
-            background: var(--orange); 
-            color: white; 
-        }
-        .type-project { 
-            background: var(--purple); 
-            color: white; 
-        }
-        .type-elective { 
-            background: var(--red); 
-            color: white; 
-        }
+        .type-theory { background: var(--blue); color: white; }
+        .type-lab { background: var(--green); color: white; }
+        .type-practical { background: var(--orange); color: white; }
+        .type-project { background: var(--purple); color: white; }
+        .type-elective { background: var(--red); color: white; }
 
         .teacher-info {
             font-size: 12px;
@@ -554,32 +638,51 @@ if ($selected_class > 0 && !empty($timetable_data)) {
             color: #666;
         }
 
-        .day-type-indicator {
-            font-size: 10px;
-            background: #333;
-            color: white;
-            padding: 2px 5px;
-            border: 1px solid #000;
-            margin-left: 5px;
-        }
-
+        /* Print Styles */
         @media print {
-            .sidebar, .content-header, .view-selector, .action-buttons, .legend, footer {
+            .sidebar, .content-header, .view-selector, .action-buttons, .legend, footer, .stats-grid {
                 display: none !important;
             }
             
             .main-content {
-                margin-left: 0;
-                padding: 0;
+                margin-left: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
             }
             
             .timetable-container {
-                box-shadow: none;
-                border: 2px solid #000;
+                box-shadow: none !important;
+                border: 2px solid #000 !important;
+                padding: 10px !important;
+                margin: 0 !important;
+                overflow: visible !important;
             }
             
-            .break-cell {
-                background: #f0f0f0 !important;
+            .timetable-table {
+                width: 100% !important;
+                min-width: 0 !important;
+                border-collapse: collapse !important;
+            }
+            
+            .timetable-table th,
+            .timetable-table td {
+                border: 1px solid #000 !important;
+                padding: 6px !important;
+                font-size: 10px !important;
+                word-break: break-word !important;
+            }
+            
+            @page {
+                size: landscape !important;
+                margin: 1cm !important;
+            }
+            
+            thead {
+                display: table-header-group !important;
+            }
+            
+            tr {
+                page-break-inside: avoid !important;
             }
         }
 
@@ -719,9 +822,10 @@ if ($selected_class > 0 && !empty($timetable_data)) {
                         </span>
                     </div>
                     <div class="action-buttons">
-                        <a href="edit_timetable.php?class_id=<?php echo $selected_class; ?>" class="action-btn edit-btn">✏️ EDIT</a>
-                        <a href="#" onclick="window.print()" class="action-btn print-btn">🖨️ PRINT</a>
-                        <a href="export_timetable.php?class_id=<?php echo $selected_class; ?>" class="action-btn export-btn">📥 EXPORT</a>
+                        <!-- In view_timetable.php, update the edit button -->
+<a href="manual_timetable.php?class_id=<?php echo $selected_class; ?>&academic_year=2024-25&semester=<?php echo $class_info['semester']; ?>" class="action-btn edit-btn">✏️ EDIT</a>
+                        <button onclick="window.print()" class="action-btn print-btn">🖨️ PRINT</button>
+                        <button onclick="exportToCSV(<?php echo $selected_class; ?>)" class="action-btn export-btn">📥 EXPORT CSV</button>
                     </div>
                 </div>
 
@@ -743,7 +847,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
                                         <span style="display: block; font-size: 12px;">🍽️ BREAK</span>
                                     <?php endif; ?>
                                     <small><?php echo date('h:i A', strtotime($slot['start_time'])); ?> - <?php echo date('h:i A', strtotime($slot['end_time'])); ?></small>
-                                    <span class="day-type-indicator"><?php echo $slot['day_type'] == 'weekday' ? 'M-F' : 'Sat'; ?></span>
                                 </td>
                                 <?php for($day = 1; $day <= 6; $day++): ?>
                                     <td class="period-cell <?php echo (isset($timetable_data[$day][$slot_id]) && $timetable_data[$day][$slot_id]['slot_is_break']) ? 'break-cell' : ''; ?>">
@@ -847,7 +950,7 @@ if ($selected_class > 0 && !empty($timetable_data)) {
                         </span>
                     </div>
                     <div class="action-buttons">
-                        <a href="#" onclick="window.print()" class="action-btn print-btn">🖨️ PRINT</a>
+                        <button onclick="window.print()" class="action-btn print-btn">🖨️ PRINT</button>
                     </div>
                 </div>
 
@@ -919,6 +1022,13 @@ if ($selected_class > 0 && !empty($timetable_data)) {
     </div>
 
     <script>
+        // Export to CSV function
+        function exportToCSV(classId) {
+            if (classId) {
+                window.location.href = '?export=csv&class_id=' + classId;
+            }
+        }
+        
         // Print function
         function printTimetable() {
             window.print();

@@ -504,7 +504,7 @@ $classes = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name");
                         </div>
 
                         <div class="class-actions">
-                            <a href="view_class.php?id=<?php echo $class['id']; ?>" class="action-btn view-btn">👁️ VIEW</a>
+                            <!-- <a href="view_class.php?id=<?php echo $class['id']; ?>" class="action-btn view-btn">👁️ VIEW</a> -->
                             <a href="edit_class.php?id=<?php echo $class['id']; ?>" class="action-btn edit-btn">✏️ EDIT</a>
                             <a href="?delete=<?php echo $class['id']; ?>" class="action-btn delete-btn" 
                                onclick="return confirm('Delete this class? This action cannot be undone.')">🗑️ DELETE</a>

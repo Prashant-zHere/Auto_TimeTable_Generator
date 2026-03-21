@@ -832,8 +832,8 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
                                 <td><?php echo htmlspecialchars($student['roll_number'] ?? '-'); ?></td>
                                 <td><?php echo date('d/m/Y', strtotime($student['created_at'])); ?></td>
                                 <td class="action-btns">
-                                    <!-- <a href="view_student.php?id=<?php echo $student['id']; ?>" class="action-btn view-btn">👁️</a>
-                                    <a href="edit_student.php?id=<?php echo $student['id']; ?>" class="action-btn edit-btn">✏️</a> -->
+                                    <!-- <a href="view_student.php?id=<?php echo $student['id']; ?>" class="action-btn view-btn">👁️</a> -->
+                                     <a href="edit_student.php?id=<?php echo $student['id']; ?>" class="action-btn edit-btn">✏️</a>
                                     <a href="?delete=<?php echo $student['id']; ?>" class="action-btn delete-btn" 
                                        onclick="return confirm('Delete this student?')">🗑️</a>
                                 </td>
