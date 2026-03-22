@@ -2,20 +2,15 @@
 session_start();
 require_once '../../include/conn/conn.php';
 
-
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
 $error = '';
 $success = '';
-
-// Fetch classes for dropdown
 $classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes ORDER BY class_name");
 
-// Fetch teachers for optional allocation
 $teachers = mysqli_query($conn, "
     SELECT t.id, u.full_name, t.employee_id 
     FROM teachers t 
@@ -24,7 +19,6 @@ $teachers = mysqli_query($conn, "
 ");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_subject'])) {
-    // Get all fields including new ones
     $subject_code = trim($_POST['subject_code']);
     $subject_name = trim($_POST['subject_name']);
     $class_id = intval($_POST['class_id']);
@@ -34,10 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_subject'])) {
     $credits = intval($_POST['credits']);
     $is_lab = isset($_POST['is_lab']) ? 1 : 0;
     $academic_year = trim($_POST['academic_year']);
+    $teacher_id = intval($_POST['teacher_id']); // Made compulsory
 
-    // Validation
     if (empty($subject_code) || empty($subject_name) || empty($class_id) || empty($semester)) {
         $error = 'Please fill all required fields.';
+    } elseif (empty($teacher_id)) {
+        $error = 'Please select a teacher for this subject.';
     } elseif (!preg_match('/^[A-Za-z0-9]+$/', $subject_code)) {
         $error = 'Subject code should contain only letters and numbers.';
     } else {
@@ -46,35 +42,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_subject'])) {
         if (mysqli_num_rows($check) > 0) {
             $error = 'Subject code already exists. Please use a different code.';
         } else {
-            // Insert into subjects table with all fields
+            // Insert into subjects table with teacher_id directly
             $insert = "INSERT INTO subjects 
-                      (subject_code, subject_name, class_id, semester, periods_per_week, 
+                      (subject_code, subject_name, class_id, teacher_id, semester, periods_per_week, 
                        subject_type, credits, is_lab, academic_year) 
                       VALUES 
-                      ('$subject_code', '$subject_name', $class_id, $semester, $periods_per_week, 
+                      ('$subject_code', '$subject_name', $class_id, $teacher_id, $semester, $periods_per_week, 
                        '$subject_type', $credits, $is_lab, '$academic_year')";
             
             if (mysqli_query($conn, $insert)) {
                 $subject_id = mysqli_insert_id($conn);
                 
-                // Optional: If teacher is selected, allocate them to this subject
-                if (!empty($_POST['teacher_id']) && $_POST['teacher_id'] != '') {
-                    $teacher_id = intval($_POST['teacher_id']);
-                    
-                    // Insert into teacher_subjects table
-                    $allocate = "INSERT INTO teacher_subjects (teacher_id, subject_id, class_id, academic_year) 
-                                VALUES ($teacher_id, $subject_id, $class_id, '$academic_year')";
-                    mysqli_query($conn, $allocate);
-                }
+                // Also insert into teacher_subjects table for compatibility
+                $allocate = "INSERT INTO teacher_subjects (teacher_id, subject_id, class_id, academic_year) 
+                            VALUES ($teacher_id, $subject_id, $class_id, '$academic_year')";
+                mysqli_query($conn, $allocate);
                 
-                $success = 'Subject added successfully!';
+                $success = 'Subject added successfully with teacher allocation!';
             } else {
                 $error = 'Error adding subject: ' . mysqli_error($conn);
             }
         }
     }
 }
-
 
 $pending_leaves = mysqli_fetch_assoc(mysqli_query($conn, 
     "SELECT COUNT(*) as count FROM leave_requests WHERE status='pending'"
@@ -86,7 +76,6 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
 
 $full_name = $_SESSION['full_name'];
 
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -94,8 +83,7 @@ $full_name = $_SESSION['full_name'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Subject · Admin</title>
-            <link rel="stylesheet" href="../../include/css/style.css">
-
+    <link rel="stylesheet" href="../../include/css/style.css">
     <style>
         * {
             margin: 0;
@@ -107,6 +95,160 @@ $full_name = $_SESSION['full_name'];
             display: flex;
             min-height: 100vh;
             background: #fafafa;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #000;
+            border-right: 4px solid #000;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 25px 20px;
+            border-bottom: 4px solid #000;
+            background: var(--blue);
+        }
+
+        .sidebar-header h2 {
+            color: white;
+            font-size: 24px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-shapes {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .logo-shapes .circle {
+            width: 16px;
+            height: 16px;
+            background: var(--yellow);
+            border-radius: 50%;
+            border: 2px solid black;
+        }
+
+        .logo-shapes .square {
+            width: 14px;
+            height: 14px;
+            background: var(--red);
+            border: 2px solid black;
+        }
+
+        .logo-shapes .triangle {
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 16px solid var(--yellow);
+        }
+
+        .admin-info {
+            padding: 20px;
+            background: #333;
+            border-bottom: 4px solid #000;
+            color: white;
+        }
+
+        .admin-name {
+            font-weight: 900;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .admin-role {
+            background: var(--yellow);
+            color: black;
+            padding: 3px 8px;
+            display: inline-block;
+            border: 2px solid #000;
+            font-weight: 800;
+            font-size: 12px;
+        }
+
+        .nav-menu {
+            flex: 1;
+            padding: 20px 0;
+        }
+
+        .nav-section {
+            margin-bottom: 25px;
+        }
+
+        .nav-section-title {
+            color: #ccc;
+            font-weight: 800;
+            font-size: 12px;
+            padding: 0 20px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            border-left: 4px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item:hover {
+            background: #333;
+            border-left-color: var(--yellow);
+        }
+
+        .nav-item.active {
+            background: #222;
+            border-left-color: var(--red);
+        }
+
+        .badge {
+            background: var(--red);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 0;
+            border: 2px solid #000;
+            font-size: 11px;
+            margin-left: auto;
+            font-weight: 900;
+        }
+
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 4px solid #000;
+            background: #1a1a1a;
+        }
+
+        .logout-btn {
+            display: block;
+            background: var(--red);
+            color: white;
+            text-decoration: none;
+            padding: 12px;
+            text-align: center;
+            font-weight: 900;
+            border: 3px solid #000;
+            box-shadow: 3px 3px 0 #000;
+            transition: all 0.1s ease;
+        }
+
+        .logout-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 5px 5px 0 #000;
         }
 
         .main-content {
@@ -246,9 +388,9 @@ $full_name = $_SESSION['full_name'];
             left: 20px;
         }
 
-        .optional-note {
-            background: #333;
-            color: white;
+        .compulsory-note {
+            background: #ffd700;
+            color: #000;
             padding: 10px;
             border: 2px solid #000;
             margin: 15px 0;
@@ -342,6 +484,14 @@ $full_name = $_SESSION['full_name'];
         .type-lab { background: var(--green); color: white; }
         .type-project { background: var(--purple); color: white; }
         .type-elective { background: var(--red); color: white; }
+
+        .date-display {
+            background: var(--blue);
+            color: white;
+            padding: 10px 15px;
+            border: 3px solid #000;
+            font-weight: 800;
+        }
     </style>
 </head>
 <body>
@@ -365,7 +515,7 @@ $full_name = $_SESSION['full_name'];
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -405,7 +555,7 @@ $full_name = $_SESSION['full_name'];
                     <span class="icon">➕</span>
                     Add Class
                 </a>
-                <a href="add_subject.php" class="nav-item yellow">
+                <a href="add_subject.php" class="nav-item yellow active">
                     <span class="icon">➕</span>
                     Add Subject
                 </a>
@@ -447,29 +597,14 @@ $full_name = $_SESSION['full_name'];
                     <span class="icon">🔒</span>
                     Lock Timetable
                 </a>
-                <!-- <a href="allocations.php" class="nav-item">
-                    <span class="icon">📊</span>
-                    Teacher Allocations
-                </a> -->
             </div>
-
-            <!-- <div class="nav-section">
-                <div class="nav-section-title">SETTINGS</div>
-                <a href="time_slots.php" class="nav-item">
-                    <span class="icon">⏰</span>
-                    Time Slots
-                </a>
-                <a href="profile.php" class="nav-item">
-                    <span class="icon">⚙️</span>
-                    Profile Settings
-                </a>
-            </div> -->
         </div>
 
         <div class="sidebar-footer">
             <a href="../logout.php" class="logout-btn">🚪 LOGOUT</a>
         </div>
     </div>
+
     <div class="main-content">
         <div class="content-header">
             <h1>➕ ADD NEW SUBJECT</h1>
@@ -490,7 +625,6 @@ $full_name = $_SESSION['full_name'];
             <?php endif; ?>
 
             <form method="post" action="">
-                <!-- Basic Subject Fields -->
                 <div class="form-row">
                     <div class="form-group">
                         <label class="required-field">🔤 SUBJECT CODE</label>
@@ -531,7 +665,6 @@ $full_name = $_SESSION['full_name'];
                     </div>
                 </div>
 
-                <!-- New Fields: Subject Type and Credits -->
                 <div class="form-row-3">
                     <div class="form-group">
                         <label>📋 SUBJECT TYPE</label>
@@ -561,7 +694,6 @@ $full_name = $_SESSION['full_name'];
                     </div>
                 </div>
 
-                <!-- Academic Year -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>📅 ACADEMIC YEAR</label>
@@ -577,34 +709,31 @@ $full_name = $_SESSION['full_name'];
                     </div>
                 </div>
 
-                <!-- Teacher Allocation Section -->
                 <div class="section-divider">
-                    <span>OPTIONAL TEACHER ALLOCATION</span>
+                    <span>COMPULSORY TEACHER ALLOCATION</span>
                 </div>
 
-                <div class="optional-note">
-                    ⚡ You can allocate a teacher now or do it later from the teacher allocation page
+                <div class="compulsory-note">
+                    ⚡ <strong>IMPORTANT:</strong> Teacher allocation is MANDATORY for every subject.
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>👨‍🏫 ALLOCATE TEACHER</label>
-                        <select name="teacher_id">
-                            <option value="">-- Not Allocated --</option>
-                            <?php 
-                            mysqli_data_seek($teachers, 0);
-                            while($teacher = mysqli_fetch_assoc($teachers)): 
-                            ?>
-                                <option value="<?php echo $teacher['id']; ?>"
-                                    <?php echo (isset($_POST['teacher_id']) && $_POST['teacher_id'] == $teacher['id']) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($teacher['full_name']) . ' (' . htmlspecialchars($teacher['employee_id']) . ')'; ?>
-                                </option>
-                            <?php endwhile; ?>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label class="required-field">👨‍🏫 ALLOCATE TEACHER</label>
+                    <select name="teacher_id" required>
+                        <option value="">-- Select Teacher --</option>
+                        <?php 
+                        mysqli_data_seek($teachers, 0);
+                        while($teacher = mysqli_fetch_assoc($teachers)): 
+                        ?>
+                            <option value="<?php echo $teacher['id']; ?>"
+                                <?php echo (isset($_POST['teacher_id']) && $_POST['teacher_id'] == $teacher['id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($teacher['full_name']) . ' (' . htmlspecialchars($teacher['employee_id']) . ')'; ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                    <div class="info-text">Select the teacher who will teach this subject</div>
                 </div>
 
-                <!-- Type Preview -->
                 <div class="type-preview">
                     <span class="type-badge type-theory">Theory</span>
                     <span class="type-badge type-practical">Practical</span>
@@ -614,7 +743,7 @@ $full_name = $_SESSION['full_name'];
                 </div>
 
                 <div class="info-text">
-                    <span class="required-field">*</span> Required fields
+                    <span class="required-field">*</span> Required fields (Teacher allocation is mandatory)
                 </div>
 
                 <button type="submit" name="add_subject" class="submit-btn">ADD SUBJECT →</button>
@@ -627,7 +756,6 @@ $full_name = $_SESSION['full_name'];
     </div>
 
     <script>
-        // Auto-populate semester based on selected class
         document.getElementById('classSelect').addEventListener('change', function() {
             let selectedOption = this.options[this.selectedIndex];
             if (selectedOption.value) {
@@ -636,7 +764,6 @@ $full_name = $_SESSION['full_name'];
             }
         });
 
-        // Auto-adjust periods based on subject type
         document.getElementById('subjectType').addEventListener('change', function() {
             let periodsInput = document.querySelector('input[name="periods_per_week"]');
             switch(this.value) {
@@ -656,10 +783,10 @@ $full_name = $_SESSION['full_name'];
             }
         });
 
-        // Form validation
         document.querySelector('form').addEventListener('submit', function(e) {
             let subjectCode = document.querySelector('input[name="subject_code"]').value;
             let subjectName = document.querySelector('input[name="subject_name"]').value;
+            let teacherId = document.querySelector('select[name="teacher_id"]').value;
             
             if (subjectCode.length < 3) {
                 alert('Subject code must be at least 3 characters long');
@@ -668,6 +795,11 @@ $full_name = $_SESSION['full_name'];
             
             if (subjectName.length < 3) {
                 alert('Subject name must be at least 3 characters long');
+                e.preventDefault();
+            }
+            
+            if (!teacherId) {
+                alert('Please select a teacher for this subject');
                 e.preventDefault();
             }
         });

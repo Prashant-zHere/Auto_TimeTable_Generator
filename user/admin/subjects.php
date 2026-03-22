@@ -3,17 +3,14 @@ session_start();
 require_once '../../include/conn/conn.php';
 
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
-// Handle delete
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     $subject_id = intval($_GET['delete']);
     
-    // Check if subject is used in timetable
     $check_timetable = mysqli_query($conn, "SELECT id FROM timetable WHERE subject_id = $subject_id LIMIT 1");
     
     if (mysqli_num_rows($check_timetable) > 0) {
@@ -25,7 +22,6 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     exit;
 }
 
-// Fetch all subjects with class and teacher info
 $subjects = mysqli_query($conn, "
     SELECT s.*, c.class_name, 
            ts.teacher_id, u.full_name as teacher_name, t.employee_id,
@@ -38,7 +34,6 @@ $subjects = mysqli_query($conn, "
     ORDER BY c.class_name, s.semester, s.subject_name
 ");
 
-// Get statistics
 $total_subjects = mysqli_num_rows($subjects);
 $theory_count = 0;
 $lab_count = 0;
@@ -46,7 +41,6 @@ $practical_count = 0;
 $project_count = 0;
 $elective_count = 0;
 
-// Reset pointer and count
 $subjects_data = [];
 while($row = mysqli_fetch_assoc($subjects)) {
     $subjects_data[] = $row;
@@ -374,7 +368,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item ">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -394,7 +388,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
                     <span class="icon">🏫</span>
                     Classes
                 </a>
-                <a href="subjects.php" class="nav-item">
+                <a href="subjects.php" class="nav-item active">
                     <span class="icon">📚</span>
                     Subjects
                 </a>

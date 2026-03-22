@@ -2,16 +2,14 @@
 session_start();
 require_once '../../include/conn/conn.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
 $error = '';
 $success = '';
 
-// Get teacher ID from URL
 $teacher_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($teacher_id == 0) {
@@ -19,7 +17,6 @@ if ($teacher_id == 0) {
     exit;
 }
 
-// Fetch teacher details
 $teacher_query = mysqli_query($conn, "
     SELECT t.*, u.id as user_id, u.username, u.email, u.full_name 
     FROM teachers t 
@@ -34,7 +31,6 @@ if (!$teacher) {
     exit;
 }
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_teacher'])) {
     $full_name = trim($_POST['full_name']);
     $email = trim($_POST['email']);
@@ -49,12 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_teacher'])) {
     if (empty($full_name) || empty($email) || empty($username) || empty($employee_id)) {
         $error = 'Please fill all required fields.';
     } else {
-        // Check if username or email exists for other users
         $check = mysqli_query($conn, "SELECT id FROM users WHERE (username='$username' OR email='$email') AND id != {$teacher['user_id']}");
         if (mysqli_num_rows($check) > 0) {
             $error = 'Username or email already exists for another user.';
         } else {
-            // Update users table
             $update_user = "UPDATE users SET 
                           username = '$username', 
                           email = '$email', 
@@ -67,7 +61,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_teacher'])) {
             $update_user .= " WHERE id = {$teacher['user_id']}";
             
             if (mysqli_query($conn, $update_user)) {
-                // Update teachers table
                 $update_teacher = "UPDATE teachers SET 
                                  employee_id = '$employee_id',
                                  department = '$department',
@@ -78,7 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_teacher'])) {
                 
                 if (mysqli_query($conn, $update_teacher)) {
                     $success = 'Teacher information updated successfully!';
-                    // Refresh teacher data
                     $teacher_query = mysqli_query($conn, "
                         SELECT t.*, u.id as user_id, u.username, u.email, u.full_name 
                         FROM teachers t 
@@ -289,7 +281,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -297,7 +289,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
 
             <div class="nav-section">
                 <div class="nav-section-title">MANAGEMENT</div>
-                <a href="teachers.php" class="nav-item">
+                <a href="teachers.php" class="nav-item active">
                     <span class="icon">👨‍🏫</span>
                     Teachers
                 </a>

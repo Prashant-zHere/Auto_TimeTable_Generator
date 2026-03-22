@@ -2,13 +2,11 @@
 session_start();
 require_once '../../include/conn/conn.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
-// Handle CSV Export
 if (isset($_GET['export']) && $_GET['export'] == 'csv' && isset($_GET['class_id'])) {
     $export_class_id = intval($_GET['class_id']);
     
@@ -17,7 +15,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'csv' && isset($_GET['class_id'
     $class_data = mysqli_fetch_assoc($class_query);
     $class_name = $class_data['class_name'];
     
-    // Get time slots
     $slots_query = mysqli_query($conn, "
         SELECT * FROM time_slots 
         WHERE class_id = $export_class_id 
@@ -28,7 +25,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'csv' && isset($_GET['class_id'
         $time_slots[$slot['id']] = $slot;
     }
     
-    // Get timetable data
     $timetable_query = mysqli_query($conn, "
         SELECT 
             t.*, 
@@ -53,27 +49,21 @@ if (isset($_GET['export']) && $_GET['export'] == 'csv' && isset($_GET['class_id'
     
     $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     
-    // Set headers for CSV download
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="timetable_' . $class_name . '_' . date('Y-m-d') . '.csv"');
     
-    // Create output stream
     $output = fopen('php://output', 'w');
     
-    // Add UTF-8 BOM for Excel compatibility
     fwrite($output, "\xEF\xBB\xBF");
     
-    // Write header row
     $headers = ['Time / Day'];
     foreach($days as $day) {
         $headers[] = $day;
     }
     fputcsv($output, $headers);
     
-    // Write data rows
     foreach($time_slots as $slot_id => $slot) {
         $row = [];
-        // Time slot column
         $time_text = 'Slot ' . $slot['slot_number'] . "\n" . 
                      date('H:i', strtotime($slot['start_time'])) . '-' . 
                      date('H:i', strtotime($slot['end_time']));
@@ -82,7 +72,6 @@ if (isset($_GET['export']) && $_GET['export'] == 'csv' && isset($_GET['class_id'
         }
         $row[] = $time_text;
         
-        // Each day column
         for($day = 1; $day <= 6; $day++) {
             if(isset($timetable_data[$day][$slot_id])) {
                 $period = $timetable_data[$day][$slot_id];
@@ -107,15 +96,12 @@ if (isset($_GET['export']) && $_GET['export'] == 'csv' && isset($_GET['class_id'
     exit;
 }
 
-// Get selected class from URL or default to first class
 $selected_class = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
 $selected_view = isset($_GET['view']) ? $_GET['view'] : 'weekly'; // weekly or teacher
 $selected_teacher = isset($_GET['teacher_id']) ? intval($_GET['teacher_id']) : 0;
 
-// Fetch all classes for dropdown
 $classes = mysqli_query($conn, "SELECT id, class_name, semester, section FROM classes ORDER BY class_name");
 
-// Fetch all teachers for teacher view
 $teachers = mysqli_query($conn, "
     SELECT t.id, u.full_name, t.employee_id 
     FROM teachers t 
@@ -123,13 +109,11 @@ $teachers = mysqli_query($conn, "
     ORDER BY u.full_name
 ");
 
-// Get class info if selected
 $class_info = null;
 if ($selected_class > 0) {
     $class_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM classes WHERE id = $selected_class"));
 }
 
-// Get teacher info if selected
 $teacher_info = null;
 if ($selected_teacher > 0) {
     $teacher_info = mysqli_fetch_assoc(mysqli_query($conn, "
@@ -140,13 +124,11 @@ if ($selected_teacher > 0) {
     "));
 }
 
-// Fetch timetable data for selected class
 $timetable_data = [];
 $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 $time_slots = [];
 
 if ($selected_class > 0 && $selected_view == 'weekly') {
-    // Get time slots for this class (including breaks)
     $slots_query = mysqli_query($conn, "
         SELECT * FROM time_slots 
         WHERE class_id = $selected_class 
@@ -157,7 +139,6 @@ if ($selected_class > 0 && $selected_view == 'weekly') {
         $time_slots[$slot['id']] = $slot;
     }
     
-    // Get timetable entries with proper joins to get break info from time_slots
     $timetable_query = mysqli_query($conn, "
         SELECT 
             t.*, 
@@ -181,7 +162,6 @@ if ($selected_class > 0 && $selected_view == 'weekly') {
     }
 }
 
-// Fetch teacher-wise timetable
 $teacher_timetable = [];
 if ($selected_teacher > 0 && $selected_view == 'teacher') {
     $teacher_query = mysqli_query($conn, "
@@ -205,7 +185,6 @@ if ($selected_teacher > 0 && $selected_view == 'teacher') {
     }
 }
 
-// Get lock status for the class
 $lock_status = false;
 if ($selected_class > 0) {
     $lock_check = mysqli_query($conn, "SELECT is_locked FROM timetable WHERE class_id = $selected_class LIMIT 1");
@@ -214,7 +193,6 @@ if ($selected_class > 0) {
     }
 }
 
-// Get statistics for the selected class
 $class_stats = [
     'total_periods' => 0,
     'with_teacher' => 0,
@@ -236,6 +214,18 @@ if ($selected_class > 0 && !empty($timetable_data)) {
         }
     }
 }
+
+$full_name = $_SESSION['full_name'];
+
+$pending_leaves = mysqli_fetch_assoc(mysqli_query($conn, 
+    "SELECT COUNT(*) as count FROM leave_requests WHERE status='pending'"
+))['count'];
+
+$pending_modifies = mysqli_fetch_assoc(mysqli_query($conn, 
+    "SELECT COUNT(*) as count FROM modify_requests WHERE status='pending'"
+))['count'];
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -709,7 +699,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
     </style>
 </head>
 <body>
-    <!-- SIDEBAR -->
     <div class="sidebar">
         <div class="sidebar-header">
             <h2>
@@ -723,39 +712,118 @@ if ($selected_class > 0 && !empty($timetable_data)) {
         </div>
 
         <div class="admin-info">
-            <div class="admin-name">👤 <?php echo htmlspecialchars($_SESSION['full_name']); ?></div>
+            <div class="admin-name">👤 <?php echo htmlspecialchars($full_name); ?></div>
             <span class="admin-role">⚙️ ADMINISTRATOR</span>
         </div>
 
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item">📊 Dashboard</a>
+                <a href="dashboard.php" class="nav-item">
+                    <span class="icon">📊</span>
+                    Dashboard
+                </a>
             </div>
 
             <div class="nav-section">
                 <div class="nav-section-title">MANAGEMENT</div>
-                <a href="teachers.php" class="nav-item">👨‍🏫 Teachers</a>
-                <a href="students.php" class="nav-item">🎓 Students</a>
-                <a href="classes.php" class="nav-item">🏫 Classes</a>
-                <a href="subjects.php" class="nav-item">📚 Subjects</a>
+                <a href="teachers.php" class="nav-item">
+                    <span class="icon">👨‍🏫</span>
+                    Teachers
+                </a>
+                <a href="students.php" class="nav-item">
+                    <span class="icon">🎓</span>
+                    Students
+                </a>
+                <a href="classes.php" class="nav-item">
+                    <span class="icon">🏫</span>
+                    Classes
+                </a>
+                <a href="subjects.php" class="nav-item">
+                    <span class="icon">📚</span>
+                    Subjects
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">ADD NEW</div>
+                <a href="add_teacher.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Teacher
+                </a>
+                <a href="add_student.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Student
+                </a>
+                <a href="add_class.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Class
+                </a>
+                <a href="add_subject.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Subject
+                </a>
+                <a href="add_time_slot.php" class="nav-item yellow">
+                    <span class="icon">➕</span>
+                    Add Time Slot
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">REQUESTS</div>
+                <a href="leave_requests.php" class="nav-item red">
+                    <span class="icon">✈️</span>
+                    Leave Requests
+                    <?php if($pending_leaves > 0): ?>
+                        <span class="badge"><?php echo $pending_leaves; ?></span>
+                    <?php endif; ?>
+                </a>
+                <a href="modify_requests.php" class="nav-item red">
+                    <span class="icon">🔄</span>
+                    Modify Requests
+                    <?php if($pending_modifies > 0): ?>
+                        <span class="badge"><?php echo $pending_modifies; ?></span>
+                    <?php endif; ?>
+                </a>
             </div>
 
             <div class="nav-section">
                 <div class="nav-section-title">TIMETABLE</div>
-                <a href="view_timetable.php" class="nav-item active">👁️ View Timetable</a>
-                <a href="generate_timetable.php" class="nav-item">⚡ Generate Timetable</a>
-                <a href="time_slots.php" class="nav-item">⏰ Time Slots</a>
-                <a href="lock_timetable.php" class="nav-item">🔒 Lock Timetable</a>
+                <a href="view_timetable.php" class="nav-item active">
+                    <span class="icon">👁️</span>
+                    View Timetable
+                </a>
+                <a href="generate_timetable.php" class="nav-item">
+                    <span class="icon">⚡</span>
+                    Generate Timetable
+                </a>
+                <a href="lock_timetable.php" class="nav-item">
+                    <span class="icon">🔒</span>
+                    Lock Timetable
+                </a>
+                <!-- <a href="allocations.php" class="nav-item">
+                    <span class="icon">📊</span>
+                    Teacher Allocations
+                </a> -->
             </div>
+
+            <!-- <div class="nav-section">
+                <div class="nav-section-title">SETTINGS</div>
+                <a href="time_slots.php" class="nav-item">
+                    <span class="icon">⏰</span>
+                    Time Slots
+                </a>
+                <a href="profile.php" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    Profile Settings
+                </a>
+            </div> -->
         </div>
 
         <div class="sidebar-footer">
             <a href="../logout.php" class="logout-btn">🚪 LOGOUT</a>
         </div>
     </div>
-
-    <!-- MAIN CONTENT -->
     <div class="main-content">
         <div class="content-header">
             <h1>👁️ VIEW TIMETABLE</h1>
@@ -764,7 +832,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
             </div>
         </div>
 
-        <!-- View Selector -->
         <div class="view-selector">
             <div class="view-tabs">
                 <a href="?view=weekly&class_id=<?php echo $selected_class; ?>" 
@@ -810,7 +877,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
         </div>
 
         <?php if ($selected_view == 'weekly' && $selected_class > 0): ?>
-            <!-- Weekly Class Timetable -->
             <div class="timetable-container">
                 <div class="timetable-header">
                     <div>
@@ -822,7 +888,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
                         </span>
                     </div>
                     <div class="action-buttons">
-                        <!-- In view_timetable.php, update the edit button -->
 <a href="manual_timetable.php?class_id=<?php echo $selected_class; ?>&academic_year=2024-25&semester=<?php echo $class_info['semester']; ?>" class="action-btn edit-btn">✏️ EDIT</a>
                         <button onclick="window.print()" class="action-btn print-btn">🖨️ PRINT</button>
                         <button onclick="exportToCSV(<?php echo $selected_class; ?>)" class="action-btn export-btn">📥 EXPORT CSV</button>
@@ -888,7 +953,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
                     </tbody>
                 </table>
 
-                <!-- Legend -->
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-color theory"></div>
@@ -917,7 +981,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
                 </div>
             </div>
 
-            <!-- Statistics -->
             <div class="stats-grid">
                 <div class="stat-box">
                     <div class="stat-number"><?php echo $class_stats['total_periods']; ?></div>
@@ -938,7 +1001,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
             </div>
 
         <?php elseif ($selected_view == 'teacher' && $selected_teacher > 0): ?>
-            <!-- Teacher Timetable -->
             <div class="timetable-container">
                 <div class="timetable-header">
                     <div>
@@ -962,7 +1024,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
                                     <?php echo $days[$day-1]; ?>
                                 </div>
                                 <?php 
-                                // Sort periods by slot number
                                 usort($teacher_timetable[$day], function($a, $b) {
                                     return $a['slot_number'] - $b['slot_number'];
                                 });
@@ -1013,7 +1074,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
             </div>
 
         <?php else: ?>
-            <!-- No Selection -->
             <div class="timetable-container" style="text-align: center; padding: 50px;">
                 <h2>📋 Please select a class or teacher to view timetable</h2>
                 <p style="margin-top: 20px;">Use the tabs above to switch between views</p>
@@ -1022,7 +1082,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
     </div>
 
     <script>
-        // Export to CSV function
         function exportToCSV(classId) {
             if (classId) {
                 window.location.href = '?export=csv&class_id=' + classId;
@@ -1034,7 +1093,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
             window.print();
         }
 
-        // Highlight current day
         let today = new Date().getDay();
         let dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         let currentDay = dayNames[today];
@@ -1046,7 +1104,6 @@ if ($selected_class > 0 && !empty($timetable_data)) {
             }
         });
 
-        // Auto-refresh on class/teacher change
         document.getElementById('classSelect')?.addEventListener('change', function() {
             if(this.value) {
                 window.location.href = '?view=weekly&class_id=' + this.value;

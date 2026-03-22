@@ -4,7 +4,7 @@ require_once '../../include/conn/conn.php';
 
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
@@ -326,7 +326,7 @@ $classes = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name");
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -342,7 +342,7 @@ $classes = mysqli_query($conn, "SELECT * FROM classes ORDER BY class_name");
                     <span class="icon">🎓</span>
                     Students
                 </a>
-                <a href="classes.php" class="nav-item">
+                <a href="classes.php" class="nav-item active">
                     <span class="icon">🏫</span>
                     Classes
                 </a>

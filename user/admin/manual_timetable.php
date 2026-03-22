@@ -2,16 +2,14 @@
 session_start();
 require_once '../../include/conn/conn.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
 $error = '';
 $success = '';
 
-// Get class ID from URL
 $class_id = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
 $academic_year = isset($_GET['academic_year']) ? $_GET['academic_year'] : '2024-25';
 $semester = isset($_GET['semester']) ? intval($_GET['semester']) : 0;
@@ -21,7 +19,6 @@ if ($class_id == 0) {
     exit;
 }
 
-// Get class info
 $class_query = mysqli_query($conn, "SELECT * FROM classes WHERE id = $class_id");
 $class_info = mysqli_fetch_assoc($class_query);
 
@@ -30,7 +27,6 @@ if (!$class_info) {
     exit;
 }
 
-// Get subjects for this class with teacher information from both sources
 $subjects = mysqli_query($conn, "
     SELECT 
         s.*, 
@@ -53,7 +49,6 @@ $subjects = mysqli_query($conn, "
     ORDER BY s.subject_code
 ");
 
-// Get teachers for dropdown
 $teachers = mysqli_query($conn, "
     SELECT t.id, u.full_name, t.employee_id 
     FROM teachers t 
@@ -61,14 +56,12 @@ $teachers = mysqli_query($conn, "
     ORDER BY u.full_name
 ");
 
-// Get time slots for this class
 $time_slots = mysqli_query($conn, "
     SELECT * FROM time_slots 
     WHERE class_id = $class_id 
     ORDER BY slot_number
 ");
 
-// Handle form submission for updating timetable
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_timetable'])) {
     $updates = 0;
     
@@ -79,16 +72,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_timetable'])) 
             $slot_id = intval($parts[2]);
             $subject_id = !empty($value) ? intval($value) : 'NULL';
             
-            // Get teacher_id from subject (check both subject table and teacher_subjects)
             $teacher_id = 'NULL';
             if ($subject_id != 'NULL') {
-                // First check if teacher is assigned directly in subjects table
                 $subject_query = mysqli_query($conn, "SELECT teacher_id FROM subjects WHERE id = $subject_id");
                 if ($subject_data = mysqli_fetch_assoc($subject_query)) {
                     if ($subject_data['teacher_id']) {
                         $teacher_id = $subject_data['teacher_id'];
                     } else {
-                        // If not in subjects, check teacher_subjects table
                         $ts_query = mysqli_query($conn, "SELECT teacher_id FROM teacher_subjects WHERE subject_id = $subject_id AND class_id = $class_id LIMIT 1");
                         if ($ts_data = mysqli_fetch_assoc($ts_query)) {
                             $teacher_id = $ts_data['teacher_id'];
@@ -97,11 +87,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_timetable'])) 
                 }
             }
             
-            // Check if entry exists
             $check = mysqli_query($conn, "SELECT id FROM timetable WHERE class_id = $class_id AND day_of_week = $day AND slot_id = $slot_id");
             
             if (mysqli_num_rows($check) > 0) {
-                // Update existing entry
                 $update = "UPDATE timetable SET 
                           subject_id = $subject_id, 
                           teacher_id = $teacher_id,
@@ -111,7 +99,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_timetable'])) 
                 mysqli_query($conn, $update);
                 $updates++;
             } else {
-                // Insert new entry
                 $insert = "INSERT INTO timetable (class_id, day_of_week, slot_id, subject_id, teacher_id, academic_year, semester, is_locked) 
                           VALUES ($class_id, $day, $slot_id, $subject_id, $teacher_id, '$academic_year', " . $class_info['semester'] . ", 0)";
                 mysqli_query($conn, $insert);
@@ -123,7 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_timetable'])) 
     $success = "Timetable updated successfully! $updates changes saved.";
 }
 
-// Get current timetable data with teacher information
 $timetable_data = [];
 $days = [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday'];
 
@@ -430,7 +416,6 @@ while($row = mysqli_fetch_assoc($timetable_query)) {
     </style>
 </head>
 <body>
-    <!-- SIDEBAR -->
     <div class="sidebar">
         <div class="sidebar-header">
             <h2>
@@ -476,7 +461,6 @@ while($row = mysqli_fetch_assoc($timetable_query)) {
         </div>
     </div>
 
-    <!-- MAIN CONTENT -->
     <div class="main-content">
         <div class="content-header">
             <h1>✏️ MANUAL TIMETABLE EDITOR</h1>
@@ -493,7 +477,6 @@ while($row = mysqli_fetch_assoc($timetable_query)) {
             <div class="success-box"><?php echo htmlspecialchars($success); ?></div>
         <?php endif; ?>
 
-        <!-- Class Information -->
         <div class="class-info">
             <div class="class-details">
                 <strong>📚 Class:</strong> <?php echo htmlspecialchars($class_info['class_name']); ?> | 
@@ -507,7 +490,6 @@ while($row = mysqli_fetch_assoc($timetable_query)) {
             </div>
         </div>
 
-        <!-- Timetable Editor Form -->
         <form method="post" action="">
             <div class="editor-container">
                 <h3 style="margin-bottom: 20px;">📅 Click on any dropdown to change the subject for that period</h3>
@@ -602,7 +584,6 @@ while($row = mysqli_fetch_assoc($timetable_query)) {
                     </tbody>
                 </table>
 
-                <!-- Legend -->
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-color break"></div>
@@ -633,7 +614,6 @@ while($row = mysqli_fetch_assoc($timetable_query)) {
             </div>
         </form>
 
-        <!-- Quick Tips -->
         <div class="tips-box">
             <h3>💡 QUICK TIPS</h3>
             <ul>
@@ -649,7 +629,6 @@ while($row = mysqli_fetch_assoc($timetable_query)) {
     </div>
 
     <script>
-        // Update teacher info when subject selection changes
         function updateTeacherInfo(selectElement, day, slotId) {
             let selectedOption = selectElement.options[selectElement.selectedIndex];
             let teacherName = selectedOption.getAttribute('data-teacher') || '';
@@ -664,7 +643,6 @@ while($row = mysqli_fetch_assoc($timetable_query)) {
             }
         }
         
-        // Confirm before leaving
         let formChanged = false;
         document.querySelectorAll('select').forEach(select => {
             select.addEventListener('change', () => {

@@ -3,7 +3,7 @@ session_start();
 require_once '../../include/conn/conn.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 

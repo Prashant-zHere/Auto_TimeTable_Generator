@@ -4,7 +4,7 @@ require_once '../../include/conn/conn.php';
 
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
@@ -356,7 +356,7 @@ $teachers = mysqli_query($conn, "
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item ">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -364,7 +364,7 @@ $teachers = mysqli_query($conn, "
 
             <div class="nav-section">
                 <div class="nav-section-title">MANAGEMENT</div>
-                <a href="teachers.php" class="nav-item">
+                <a href="teachers.php" class="nav-item active">
                     <span class="icon">👨‍🏫</span>
                     Teachers
                 </a>
@@ -461,7 +461,6 @@ $teachers = mysqli_query($conn, "
             <a href="../logout.php" class="logout-btn">🚪 LOGOUT</a>
         </div>
     </div>
-    <!-- MAIN CONTENT -->
     <div class="main-content">
         <div class="content-header">
             <h1>👨‍🏫 MANAGE TEACHERS</h1>
@@ -471,10 +470,8 @@ $teachers = mysqli_query($conn, "
         </div>
 
         <?php
-        // Get statistics
         $total_teachers = mysqli_num_rows($teachers);
         
-        // Get department distribution
         $dept_stats = mysqli_query($conn, "
             SELECT department, COUNT(*) as count 
             FROM teachers 
@@ -484,7 +481,6 @@ $teachers = mysqli_query($conn, "
             LIMIT 3
         ");
         
-        // Get total allocations
         $total_allocations = mysqli_fetch_assoc(mysqli_query($conn, 
             "SELECT COUNT(*) as count FROM teacher_subjects"
         ))['count'];

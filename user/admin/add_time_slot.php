@@ -2,22 +2,18 @@
 session_start();
 require_once '../../include/conn/conn.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
 $error = '';
 $success = '';
 
-// Fetch all classes for dropdown
 $classes = mysqli_query($conn, "SELECT id, class_name, semester, section FROM classes ORDER BY class_name");
 
-// Get selected class from URL or POST
 $selected_class = isset($_GET['class_id']) ? intval($_GET['class_id']) : (isset($_POST['class_id']) ? intval($_POST['class_id']) : 0);
 
-// Get existing slot numbers for selected class to suggest next slot number
 $existing_slots = [];
 $existing_breaks = [];
 if ($selected_class > 0) {
@@ -30,13 +26,11 @@ if ($selected_class > 0) {
     }
 }
 
-// Get class info
 $class_info = null;
 if ($selected_class > 0) {
     $class_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM classes WHERE id = $selected_class"));
 }
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_time_slot'])) {
     $class_id = intval($_POST['class_id']);
     $slot_number = intval($_POST['slot_number']);
@@ -45,7 +39,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_time_slot'])) {
     $day_type = $_POST['day_type'];
     $is_break = isset($_POST['is_break']) ? 1 : 0;
 
-    // Validation
     if (empty($class_id) || empty($slot_number) || empty($start_time) || empty($end_time)) {
         $error = 'Please fill all required fields.';
     } elseif ($start_time >= $end_time) {
@@ -56,13 +49,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_time_slot'])) {
         if (mysqli_num_rows($check) > 0) {
             $error = 'Slot number ' . $slot_number . ' already exists for this class. Please use a different slot number.';
         } else {
-            // Insert new time slot
             $insert = "INSERT INTO time_slots (class_id, slot_number, start_time, end_time, day_type, is_break) 
                       VALUES ($class_id, $slot_number, '$start_time', '$end_time', '$day_type', $is_break)";
             
             if (mysqli_query($conn, $insert)) {
                 $success = 'Time slot added successfully!';
-                // Clear POST data
                 $_POST = array();
             } else {
                 $error = 'Error adding time slot: ' . mysqli_error($conn);
@@ -71,7 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_time_slot'])) {
     }
 }
 
-// Suggest next slot number
 $next_slot_number = 1;
 if (!empty($existing_slots)) {
     $next_slot_number = max($existing_slots) + 1;
@@ -487,7 +477,7 @@ $full_name = $_SESSION['full_name'];
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -531,7 +521,7 @@ $full_name = $_SESSION['full_name'];
                     <span class="icon">➕</span>
                     Add Subject
                 </a>
-                <a href="add_time_slot.php" class="nav-item yellow">
+                <a href="add_time_slot.php" class="nav-item yellow active">
                     <span class="icon">➕</span>
                     Add Time Slot
                 </a>
@@ -608,7 +598,6 @@ $full_name = $_SESSION['full_name'];
             <div class="success-box"><?php echo $success; ?></div>
         <?php endif; ?>
 
-        <!-- Class Selection Grid -->
         <div class="class-selector">
             <h3>📌 1. SELECT CLASS</h3>
             <div class="class-grid">
@@ -623,7 +612,6 @@ $full_name = $_SESSION['full_name'];
         </div>
 
         <?php if ($selected_class > 0 && $class_info): ?>
-            <!-- Selected Class Info -->
             <div class="selected-class-info">
                 <div>
                     <strong>SELECTED CLASS:</strong> <?php echo htmlspecialchars($class_info['class_name']); ?> 
@@ -635,7 +623,6 @@ $full_name = $_SESSION['full_name'];
                 </div>
             </div>
 
-            <!-- Existing Slots Display -->
             <?php if (!empty($existing_slots)): ?>
                 <div class="existing-slots">
                     <h4>📋 EXISTING SLOTS FOR THIS CLASS</h4>
@@ -656,7 +643,6 @@ $full_name = $_SESSION['full_name'];
                 </div>
             <?php endif; ?>
 
-            <!-- Add Time Slot Form -->
             <div class="form-container">
                 <h2>⏰ 2. ADD TIME SLOT DETAILS</h2>
                 
@@ -687,7 +673,6 @@ $full_name = $_SESSION['full_name'];
                         </div>
                     </div>
 
-                    <!-- Day Type Selection -->
                     <div class="day-type-selector">
                         <div class="day-type-option">
                             <input type="radio" name="day_type" id="day_weekday" value="weekday" 
@@ -701,14 +686,12 @@ $full_name = $_SESSION['full_name'];
                         </div>
                     </div>
 
-                    <!-- Break Checkbox -->
                     <div class="checkbox-group">
                         <input type="checkbox" name="is_break" id="is_break" value="1"
                                <?php echo (isset($_POST['is_break']) && $_POST['is_break'] == '1') ? 'checked' : ''; ?>>
                         <label for="is_break">🍽️ This is a BREAK slot (lunch/short break)</label>
                     </div>
 
-                    <!-- Preview -->
                     <div class="slot-preview" id="slotPreview">
                         <strong>Preview:</strong><br>
                         Slot <span id="previewSlot"><?php echo isset($_POST['slot_number']) ? $_POST['slot_number'] : $next_slot_number; ?></span><br>
@@ -720,7 +703,6 @@ $full_name = $_SESSION['full_name'];
                     <button type="submit" name="add_time_slot" class="submit-btn">ADD TIME SLOT →</button>
                 </form>
 
-                <!-- Quick Add Common Slots with Breaks -->
                 <div style="margin-top: 20px;">
                     <h4 style="margin-bottom: 10px;">⚡ Quick Add Common Slots</h4>
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
@@ -740,7 +722,6 @@ $full_name = $_SESSION['full_name'];
                 </div>
             </div>
 
-            <!-- Sample Timetable with Breaks -->
             <div class="sample-timetable">
                 <h3>📋 SAMPLE TIMETABLE WITH BREAKS</h3>
                 <div class="sample-row header">
@@ -803,7 +784,6 @@ $full_name = $_SESSION['full_name'];
     </div>
 
     <script>
-        // Update preview
         function updatePreview() {
             let slot = document.getElementById('slot_number').value;
             let start = document.getElementById('start_time').value;
@@ -823,7 +803,6 @@ $full_name = $_SESSION['full_name'];
             }
         }
 
-        // Add event listeners
         document.getElementById('slot_number').addEventListener('input', updatePreview);
         document.getElementById('start_time').addEventListener('input', updatePreview);
         document.getElementById('end_time').addEventListener('input', updatePreview);
@@ -832,7 +811,6 @@ $full_name = $_SESSION['full_name'];
         });
         document.getElementById('is_break').addEventListener('change', updatePreview);
 
-        // Quick add function
         function quickAdd(slot, start, end, isBreak) {
             document.getElementById('slot_number').value = slot;
             document.getElementById('start_time').value = start;
@@ -841,7 +819,6 @@ $full_name = $_SESSION['full_name'];
             updatePreview();
         }
 
-        // Form validation
         document.querySelector('form').addEventListener('submit', function(e) {
             let startTime = document.getElementById('start_time').value;
             let endTime = document.getElementById('end_time').value;
@@ -852,7 +829,6 @@ $full_name = $_SESSION['full_name'];
             }
         });
 
-        // Initial preview
         updatePreview();
     </script>
 </body>

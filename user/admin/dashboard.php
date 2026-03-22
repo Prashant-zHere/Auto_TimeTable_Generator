@@ -3,7 +3,7 @@ session_start();
 require_once '../../include/conn/conn.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
@@ -620,7 +620,7 @@ $recent_leaves = mysqli_query($conn,
             <a href="add_class.php" class="quick-action-btn">➕ ADD CLASS</a>
             <a href="add_subject.php" class="quick-action-btn">➕ ADD SUBJECT</a>
             <a href="generate_timetable.php" class="quick-action-btn">⚡ GENERATE</a>
-            <a href="allocations.php" class="quick-action-btn">📊 ALLOCATE</a>
+            <a href="modify_requests.php" class="quick-action-btn">📊 Modify</a>
             <a href="leave_requests.php" class="quick-action-btn">✈️ LEAVES</a>
             <a href="view_timetable.php" class="quick-action-btn">👁️ VIEW</a>
         </div>

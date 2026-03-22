@@ -2,16 +2,14 @@
 session_start();
 require_once '../../include/conn/conn.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
 $error = '';
 $success = '';
 
-// Get student ID from URL
 $student_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($student_id == 0) {
@@ -19,7 +17,6 @@ if ($student_id == 0) {
     exit;
 }
 
-// Fetch student details
 $student_query = mysqli_query($conn, "
     SELECT s.*, u.id as user_id, u.username, u.email, u.full_name, c.class_name 
     FROM students s 
@@ -35,10 +32,8 @@ if (!$student) {
     exit;
 }
 
-// Fetch classes for dropdown
 $classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes ORDER BY class_name");
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_student'])) {
     $full_name = trim($_POST['full_name']);
     $email = trim($_POST['email']);
@@ -52,17 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_student'])) {
     if (empty($full_name) || empty($email) || empty($username) || empty($student_id_num)) {
         $error = 'Please fill all required fields.';
     } else {
-        // Check if username or email exists for other users
         $check = mysqli_query($conn, "SELECT id FROM users WHERE (username='$username' OR email='$email') AND id != {$student['user_id']}");
         if (mysqli_num_rows($check) > 0) {
             $error = 'Username or email already exists for another user.';
         } else {
-            // Check if student ID exists for other students
             $check_student = mysqli_query($conn, "SELECT id FROM students WHERE student_id='$student_id_num' AND id != $student_id");
             if (mysqli_num_rows($check_student) > 0) {
                 $error = 'Student ID already exists for another student.';
             } else {
-                // Update users table
                 $update_user = "UPDATE users SET 
                               username = '$username', 
                               email = '$email', 
@@ -75,7 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_student'])) {
                 $update_user .= " WHERE id = {$student['user_id']}";
                 
                 if (mysqli_query($conn, $update_user)) {
-                    // Update students table
                     $update_student = "UPDATE students SET 
                                      student_id = '$student_id_num',
                                      class_id = $class_id,
@@ -85,7 +76,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_student'])) {
                     
                     if (mysqli_query($conn, $update_student)) {
                         $success = 'Student information updated successfully!';
-                        // Refresh student data
                         $student_query = mysqli_query($conn, "
                             SELECT s.*, u.id as user_id, u.username, u.email, u.full_name, c.class_name 
                             FROM students s 
@@ -293,7 +283,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -305,7 +295,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
                     <span class="icon">👨‍🏫</span>
                     Teachers
                 </a>
-                <a href="students.php" class="nav-item">
+                <a href="students.php" class="nav-item active">
                     <span class="icon">🎓</span>
                     Students
                 </a>

@@ -3,29 +3,24 @@ session_start();
 require_once '../../include/conn/conn.php';
 
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
-// Handle delete
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     $student_id = intval($_GET['delete']);
     
-    // Get user_id first
     $get_user = mysqli_query($conn, "SELECT user_id FROM students WHERE id = $student_id");
     if ($get_user && mysqli_num_rows($get_user) > 0) {
         $user = mysqli_fetch_assoc($get_user);
         $user_id = $user['user_id'];
-        // Delete from users (cascade will delete student)
         mysqli_query($conn, "DELETE FROM users WHERE id = $user_id");
     }
     header('Location: students.php');
     exit;
 }
 
-// Handle bulk action
 if (isset($_POST['bulk_action']) && isset($_POST['selected_ids'])) {
     $action = $_POST['bulk_action'];
     $selected_ids = explode(',', $_POST['selected_ids']);
@@ -49,7 +44,6 @@ if (isset($_POST['bulk_action']) && isset($_POST['selected_ids'])) {
     exit;
 }
 
-// Handle sorting
 $sort = isset($_GET['sort']) ? $_GET['sort'] : 'name';
 $order = isset($_GET['order']) && $_GET['order'] == 'desc' ? 'DESC' : 'ASC';
 $next_order = $order == 'ASC' ? 'desc' : 'asc';
@@ -64,7 +58,6 @@ $valid_sorts = [
 ];
 $sort_column = isset($valid_sorts[$sort]) ? $valid_sorts[$sort] : 'u.full_name';
 
-// Fetch all students with class info
 $students = mysqli_query($conn, "
     SELECT s.*, u.full_name, u.email, u.username, u.created_at, 
            c.class_name, c.semester as class_semester
@@ -74,12 +67,10 @@ $students = mysqli_query($conn, "
     ORDER BY $sort_column $order, u.full_name ASC
 ");
 
-// Get statistics
 $total_students = mysqli_num_rows($students);
 $students_with_class = 0;
 $students_without_class = 0;
 
-// Count students with/without class
 $students_data = [];
 while($row = mysqli_fetch_assoc($students)) {
     $students_data[] = $row;
@@ -91,7 +82,6 @@ while($row = mysqli_fetch_assoc($students)) {
 }
 $students = $students_data;
 
-// Get class-wise distribution
 $class_distribution = mysqli_query($conn, "
     SELECT c.id, c.class_name, COUNT(s.id) as student_count 
     FROM classes c 
@@ -109,7 +99,6 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
 ))['count'];
 $full_name = $_SESSION['full_name'];
 
-// Get all classes for bulk action
 $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes ORDER BY class_name");
 ?>
 <!DOCTYPE html>
@@ -550,7 +539,7 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item ">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -562,7 +551,7 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
                     <span class="icon">👨‍🏫</span>
                     Teachers
                 </a>
-                <a href="students.php" class="nav-item">
+                <a href="students.php" class="nav-item active">
                     <span class="icon">🎓</span>
                     Students
                 </a>
@@ -656,7 +645,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
         </div>
     </div>
 
-    <!-- MAIN CONTENT -->
     <div class="main-content">
         <div class="content-header">
             <h1>🎓 MANAGE STUDENTS</h1>
@@ -665,7 +653,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
             </div>
         </div>
 
-        <!-- Statistics Cards -->
         <div class="stats-cards">
             <div class="stat-card">
                 <h3>👥 TOTAL STUDENTS</h3>
@@ -687,7 +674,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
             </div>
         </div>
 
-        <!-- Class Distribution -->
         <div class="class-distribution">
             <h3>📊 CLASS WISE DISTRIBUTION</h3>
             <div class="distro-grid">
@@ -700,7 +686,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
             </div>
         </div>
 
-        <!-- Filter Section -->
         <div class="filter-section">
             <div class="filter-row">
                 <div class="filter-group">
@@ -731,7 +716,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
             </div>
         </div>
 
-        <!-- Bulk Actions -->
         <div class="bulk-actions" id="bulkActions" style="display: none;">
             <div class="bulk-select">
                 <span class="selected-count" id="selectedCount">0 selected</span>
@@ -759,7 +743,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
             </div>
         </div>
 
-        <!-- Actions Bar -->
         <div class="actions-bar">
             <h2>Student List (<?php echo $total_students; ?>)</h2>
             <div style="display: flex; gap: 10px;">
@@ -767,7 +750,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
             </div>
         </div>
 
-        <!-- Students Table -->
         <div class="students-table-container">
             <table class="students-table" id="studentsTable">
                 <thead>
@@ -850,7 +832,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
             </table>
         </div>
 
-        <!-- Pagination (simple version) -->
         <div class="pagination">
             <button class="page-btn" onclick="changePage(1)">1</button>
             <button class="page-btn" onclick="changePage(2)">2</button>
@@ -861,7 +842,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
     </div>
 
     <script>
-        // Filter functionality
         function filterTable() {
             let searchInput = document.getElementById('searchInput').value.toLowerCase();
             let classFilter = document.getElementById('classFilter').value;
@@ -889,7 +869,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
             updateSelectedCount();
         }
 
-        // Bulk actions
         let selectedStudents = [];
 
         function toggleAll() {
@@ -925,12 +904,10 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
             }
         }
 
-        // Add click handlers to checkboxes
         document.querySelectorAll('.student-checkbox').forEach(cb => {
             cb.addEventListener('change', updateSelectedCount);
         });
 
-        // Bulk action select change
         document.getElementById('bulkActionSelect').addEventListener('change', function() {
             let classSelect = document.getElementById('bulkClassSelect');
             let semesterInput = document.getElementById('bulkSemester');
@@ -944,7 +921,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
             }
         });
 
-        // Class select change - auto fill semester
         document.getElementById('bulkClassSelect').addEventListener('change', function() {
             let selected = this.options[this.selectedIndex];
             if(selected) {
@@ -1002,7 +978,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
             form.submit();
         }
 
-        // Export to CSV
         function exportTableToCSV() {
             let csv = [];
             let rows = document.querySelectorAll('#studentsTable tr');
@@ -1026,7 +1001,6 @@ $all_classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes
             link.click();
         }
 
-        // Simple pagination (just for UI)
         function changePage(page) {
             alert('Page ' + page + ' - Implement server-side pagination for production');
         }

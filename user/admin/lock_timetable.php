@@ -2,9 +2,8 @@
 session_start();
 require_once '../../include/conn/conn.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
@@ -12,19 +11,15 @@ $error = '';
 $success = '';
 $warning = '';
 
-// Get selected class from URL
 $selected_class = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
 
-// Fetch all classes for dropdown
 $classes = mysqli_query($conn, "SELECT id, class_name, semester, section FROM classes ORDER BY class_name");
 
-// Get class info if selected
 $class_info = null;
 if ($selected_class > 0) {
     $class_info = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM classes WHERE id = $selected_class"));
 }
 
-// Get lock status for the class
 $lock_status = false;
 $locked_periods_count = 0;
 $total_periods_count = 0;
@@ -36,7 +31,6 @@ if ($selected_class > 0) {
         $lock_status = $lock_row['is_locked'];
     }
     
-    // Count locked and total periods
     $periods_query = mysqli_query($conn, "SELECT COUNT(*) as total, SUM(CASE WHEN is_locked = 1 THEN 1 ELSE 0 END) as locked FROM timetable WHERE class_id = $selected_class");
     if ($periods_query) {
         $periods_data = mysqli_fetch_assoc($periods_query);
@@ -45,7 +39,6 @@ if ($selected_class > 0) {
     }
 }
 
-// Handle lock/unlock all periods
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lock_all'])) {
     $class_id = intval($_POST['class_id']);
     $action = $_POST['action']; // 'lock' or 'unlock'
@@ -71,12 +64,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lock_all'])) {
     }
 }
 
-// Handle lock/unlock individual period
 if (isset($_GET['toggle_period']) && is_numeric($_GET['toggle_period'])) {
     $timetable_id = intval($_GET['toggle_period']);
     $class_id_param = $selected_class;
     
-    // Get current lock status
     $current = mysqli_query($conn, "SELECT is_locked FROM timetable WHERE id = $timetable_id");
     if ($current && mysqli_num_rows($current) > 0) {
         $row = mysqli_fetch_assoc($current);
@@ -85,7 +76,6 @@ if (isset($_GET['toggle_period']) && is_numeric($_GET['toggle_period'])) {
         $update = "UPDATE timetable SET is_locked = $new_status WHERE id = $timetable_id";
         if (mysqli_query($conn, $update)) {
             $success = "Period status updated successfully!";
-            // Refresh counts
             $periods_query = mysqli_query($conn, "SELECT COUNT(*) as total, SUM(CASE WHEN is_locked = 1 THEN 1 ELSE 0 END) as locked FROM timetable WHERE class_id = $class_id_param");
             if ($periods_query) {
                 $periods_data = mysqli_fetch_assoc($periods_query);
@@ -100,19 +90,16 @@ if (isset($_GET['toggle_period']) && is_numeric($_GET['toggle_period'])) {
     exit;
 }
 
-// Get timetable data for selected class with lock status
 $timetable_data = [];
 $days = [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday'];
 $time_slots = [];
 
 if ($selected_class > 0) {
-    // Get time slots
     $slots_query = mysqli_query($conn, "SELECT * FROM time_slots WHERE class_id = $selected_class ORDER BY slot_number");
     while($slot = mysqli_fetch_assoc($slots_query)) {
         $time_slots[$slot['id']] = $slot;
     }
     
-    // Get timetable entries
     $timetable_query = mysqli_query($conn, "
         SELECT t.*, s.subject_name, s.subject_code, u.full_name as teacher_name
         FROM timetable t
@@ -128,7 +115,6 @@ if ($selected_class > 0) {
     }
 }
 
-// Get all classes with lock status for dashboard
 $all_classes_status = mysqli_query($conn, "
     SELECT 
         c.id, 
@@ -499,7 +485,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -577,7 +563,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
                     <span class="icon">⚡</span>
                     Generate Timetable
                 </a>
-                <a href="lock_timetable.php" class="nav-item">
+                <a href="lock_timetable.php" class="nav-item active">
                     <span class="icon">🔒</span>
                     Lock Timetable
                 </a>
@@ -638,7 +624,6 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
         </div>
 
         <?php if ($selected_class > 0 && $class_info): ?>
-            <!-- Lock Status Cards -->
             <div class="status-cards">
                 <div class="status-card">
                     <h3>📊 TOTAL PERIODS</h3>
@@ -654,7 +639,6 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
                 </div>
             </div>
 
-            <!-- Lock/Unlock All Actions -->
             <div class="action-buttons">
                 <form method="post" style="flex: 1;">
                     <input type="hidden" name="class_id" value="<?php echo $selected_class; ?>">
@@ -672,14 +656,12 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
                 </form>
             </div>
 
-            <!-- Warning if fully locked -->
             <?php if ($locked_periods_count == $total_periods_count && $total_periods_count > 0): ?>
                 <div class="warning-box">
                     ⚠️ ALL periods are locked! No changes can be made to this timetable.
                 </div>
             <?php endif; ?>
 
-            <!-- Timetable with Lock Toggles -->
             <div class="timetable-container">
                 <h3 style="margin-bottom: 20px;">📅 Click the lock icon on any period to toggle lock status</h3>
                 
@@ -738,7 +720,6 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
                     </tbody>
                 </table>
 
-                <!-- Legend -->
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-color locked"></div>
@@ -754,7 +735,6 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
         <?php elseif ($selected_class > 0 && !$class_info): ?>
             <div class="error-box">Class not found. Please select a valid class.</div>
         <?php else: ?>
-            <!-- All Classes Status Overview -->
             <div class="timetable-container">
                 <h3 style="margin-bottom: 20px;">📊 ALL CLASSES LOCK STATUS</h3>
                 <table class="timetable-table">
@@ -809,7 +789,6 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
         </div>
 
         <script>
-            // Auto-refresh on class change
             document.getElementById('classSelect')?.addEventListener('change', function() {
                 if(this.value) {
                     window.location.href = '?class_id=' + this.value;

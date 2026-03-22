@@ -2,16 +2,14 @@
 session_start();
 require_once '../../include/conn/conn.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
 $error = '';
 $success = '';
 
-// Get class ID from URL
 $class_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($class_id == 0) {
@@ -19,7 +17,6 @@ if ($class_id == 0) {
     exit;
 }
 
-// Fetch class details
 $class_query = mysqli_query($conn, "SELECT * FROM classes WHERE id = $class_id");
 $class = mysqli_fetch_assoc($class_query);
 
@@ -28,7 +25,6 @@ if (!$class) {
     exit;
 }
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_class'])) {
     $class_name = trim($_POST['class_name']);
     $semester = intval($_POST['semester']);
@@ -38,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_class'])) {
     if (empty($class_name) || empty($semester) || empty($section)) {
         $error = 'Please fill all required fields.';
     } else {
-        // Check if class name exists for other classes
         $check = mysqli_query($conn, "SELECT id FROM classes WHERE class_name='$class_name' AND id != $class_id");
         if (mysqli_num_rows($check) > 0) {
             $error = 'Class name already exists.';
@@ -52,7 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_class'])) {
             
             if (mysqli_query($conn, $update)) {
                 $success = 'Class updated successfully!';
-                // Refresh class data
                 $class_query = mysqli_query($conn, "SELECT * FROM classes WHERE id = $class_id");
                 $class = mysqli_fetch_assoc($class_query);
             } else {
@@ -244,7 +238,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -260,7 +254,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
                     <span class="icon">🎓</span>
                     Students
                 </a>
-                <a href="classes.php" class="nav-item">
+                <a href="classes.php" class="nav-item active">
                     <span class="icon">🏫</span>
                     Classes
                 </a>

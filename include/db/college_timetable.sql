@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 21, 2026 at 08:33 AM
+-- Generation Time: Mar 22, 2026 at 09:48 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -40,9 +40,10 @@ CREATE TABLE `classes` (
 --
 
 INSERT INTO `classes` (`id`, `class_name`, `semester`, `section`, `total_students`) VALUES
-(4, 'BCA sem 3', 3, 'A', 50),
-(5, 'BCA sem 5', 5, 'A', 80),
-(6, 'BBA sem 2', 2, 'A', 80);
+(7, 'BCA sem 5', 5, 'A', 80),
+(8, 'BBA sem 3', 3, 'A', 80),
+(9, 'BCA sem 3', 3, 'A', 80),
+(10, 'BBA sem 1', 1, 'A', 80);
 
 -- --------------------------------------------------------
 
@@ -55,7 +56,7 @@ CREATE TABLE `leave_requests` (
   `teacher_id` int(11) DEFAULT NULL,
   `leave_date` date DEFAULT NULL,
   `slot_id` int(11) DEFAULT NULL,
-  `reason` text DEFAULT NULL,
+  `reason` varchar(500) DEFAULT NULL,
   `status` enum('pending','approved','rejected') DEFAULT 'pending',
   `requested_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `processed_by` int(11) DEFAULT NULL,
@@ -74,6 +75,7 @@ CREATE TABLE `modify_requests` (
   `timetable_id` int(11) DEFAULT NULL,
   `requested_change` text DEFAULT NULL,
   `reason` text DEFAULT NULL,
+  `admin_comment` text DEFAULT NULL,
   `status` enum('pending','approved','rejected') DEFAULT 'pending',
   `requested_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `processed_by` int(11) DEFAULT NULL
@@ -99,7 +101,7 @@ CREATE TABLE `students` (
 --
 
 INSERT INTO `students` (`id`, `user_id`, `student_id`, `class_id`, `semester`, `roll_number`) VALUES
-(5, 14, '1001', 5, 5, '12');
+(6, 16, '1001', 7, 5, '1');
 
 -- --------------------------------------------------------
 
@@ -126,12 +128,18 @@ CREATE TABLE `subjects` (
 --
 
 INSERT INTO `subjects` (`id`, `subject_code`, `subject_name`, `class_id`, `teacher_id`, `semester`, `periods_per_week`, `subject_type`, `credits`, `is_lab`, `academic_year`) VALUES
-(16, '501', 'DSA', 5, NULL, 5, 4, 'Practical', 4, 1, '2024-25'),
-(17, '502', 'PHP', 5, NULL, 5, 4, 'Theory', 4, 0, '2024-25'),
-(18, '503', 'Software Testing', 5, NULL, 5, 4, 'Theory', 4, 0, '2024-25'),
-(19, '504', 'OOSE', 5, NULL, 5, 4, 'Theory', 4, 0, '2024-25'),
-(20, '505', 'Python', 5, NULL, 5, 4, 'Practical', 4, 1, '2024-25'),
-(21, '506', 'Project', 5, NULL, 5, 2, 'Project', 4, 1, '2024-25');
+(22, '501', 'Maths', 7, NULL, 5, 4, 'Theory', 4, 0, '2025-26'),
+(23, '502', 'DSA', 7, NULL, 5, 4, 'Lab', 4, 1, '2025-26'),
+(24, '503', 'Software testing', 7, NULL, 5, 4, 'Theory', 4, 0, '2025-26'),
+(25, '504', 'Project', 7, 4, 5, 4, 'Project', 4, 0, '2025-26'),
+(26, '505', 'Python', 7, 4, 5, 4, 'Practical', 4, 0, '2025-26'),
+(27, '506', 'Soft skills', 7, 6, 5, 1, 'Elective', 4, 0, '2025-26'),
+(28, '101', 'Soft skills', 10, 7, 1, 3, 'Elective', 4, 0, '2025-26'),
+(29, '102', 'Business Maths', 10, 5, 1, 4, 'Theory', 4, 0, '2025-26'),
+(30, '103', 'Accounts', 10, 8, 1, 4, 'Theory', 4, 0, '2025-26'),
+(31, '104', 'OCM', 10, 9, 1, 4, 'Theory', 4, 0, '2025-26'),
+(32, '105', 'Information technology', 10, 6, 1, 4, 'Theory', 4, 0, '2025-26'),
+(33, '106', 'Secretial Practice', 10, 7, 1, 4, 'Theory', 4, 0, '2025-26');
 
 -- --------------------------------------------------------
 
@@ -154,11 +162,12 @@ CREATE TABLE `teachers` (
 --
 
 INSERT INTO `teachers` (`id`, `user_id`, `employee_id`, `department`, `qualification`, `experience`, `max_periods_per_day`) VALUES
-(4, 8, '101', 'Information Technology', 'M.Tech', 5, 4),
+(4, 8, '101', 'Information Technology', 'M.Tech', 4, 4),
 (5, 9, '102', 'Electronics', 'M.Tech', 0, 6),
 (6, 10, '103', 'Computer Science', 'M.Tech', 2, 6),
 (7, 11, '104', 'Computer Science', 'M.Tech', 2, 6),
-(8, 12, '105', 'Computer Science', 'M.Tech', 2, 6);
+(8, 12, '105', 'Computer Science', 'M.Tech', 2, 6),
+(9, 15, '107', 'Mathematics', 'MCA', 5, 6);
 
 -- --------------------------------------------------------
 
@@ -179,12 +188,18 @@ CREATE TABLE `teacher_subjects` (
 --
 
 INSERT INTO `teacher_subjects` (`id`, `teacher_id`, `subject_id`, `class_id`, `academic_year`) VALUES
-(5, 4, 16, 5, '2024-25'),
-(6, 8, 17, 5, '2024-25'),
-(7, 6, 18, 5, '2024-25'),
-(8, 7, 19, 5, '2024-25'),
-(9, 7, 20, 5, '2024-25'),
-(10, 5, 21, 5, '2024-25');
+(11, 9, 22, 7, '2025-26'),
+(12, 8, 23, 7, '2025-26'),
+(13, 7, 24, 7, '2025-26'),
+(14, 6, 25, 7, '2025-26'),
+(15, 5, 26, 7, '2025-26'),
+(16, 6, 27, 7, '2025-26'),
+(17, 7, 28, 10, '2025-26'),
+(18, 5, 29, 10, '2025-26'),
+(19, 8, 30, 10, '2025-26'),
+(20, 9, 31, 10, '2025-26'),
+(21, 6, 32, 10, '2025-26'),
+(22, 7, 33, 10, '2025-26');
 
 -- --------------------------------------------------------
 
@@ -209,36 +224,36 @@ CREATE TABLE `timetable` (
 --
 
 INSERT INTO `timetable` (`id`, `class_id`, `day_of_week`, `slot_id`, `subject_id`, `teacher_id`, `is_locked`, `academic_year`, `semester`) VALUES
-(1, 5, 1, 47, 18, 6, 0, '2024-25', 5),
-(2, 5, 1, 48, 18, 6, 0, '2024-25', 5),
-(3, 5, 1, 49, NULL, NULL, 0, '2024-25', 5),
-(4, 5, 1, 50, 18, 6, 0, '2024-25', 5),
-(5, 5, 1, 51, 18, 6, 0, '2024-25', 5),
-(6, 5, 2, 47, 20, 7, 0, '2024-25', 5),
-(7, 5, 2, 48, 20, 7, 0, '2024-25', 5),
-(8, 5, 2, 49, NULL, NULL, 0, '2024-25', 5),
-(9, 5, 2, 50, 21, 5, 0, '2024-25', 5),
-(10, 5, 2, 51, 20, 7, 0, '2024-25', 5),
-(11, 5, 3, 47, 19, 7, 0, '2024-25', 5),
-(12, 5, 3, 48, 16, 4, 0, '2024-25', 5),
-(13, 5, 3, 49, NULL, NULL, 0, '2024-25', 5),
-(14, 5, 3, 50, 20, 7, 0, '2024-25', 5),
-(15, 5, 3, 51, 17, 8, 0, '2024-25', 5),
-(16, 5, 4, 47, 21, 5, 0, '2024-25', 5),
-(17, 5, 4, 48, 17, 8, 0, '2024-25', 5),
-(18, 5, 4, 49, NULL, NULL, 0, '2024-25', 5),
-(19, 5, 4, 50, 19, 7, 0, '2024-25', 5),
-(20, 5, 4, 51, 19, 7, 0, '2024-25', 5),
-(21, 5, 5, 47, 19, 7, 0, '2024-25', 5),
-(22, 5, 5, 48, 17, 8, 0, '2024-25', 5),
-(23, 5, 5, 49, NULL, NULL, 0, '2024-25', 5),
-(24, 5, 5, 50, 17, 8, 0, '2024-25', 5),
-(25, 5, 5, 51, 16, 4, 0, '2024-25', 5),
-(26, 5, 6, 47, 16, 4, 0, '2024-25', 5),
-(27, 5, 6, 48, 16, 4, 0, '2024-25', 5),
-(28, 5, 6, 49, NULL, NULL, 0, '2024-25', 5),
-(29, 5, 6, 50, NULL, NULL, 0, '2024-25', 5),
-(30, 5, 6, 51, NULL, NULL, 0, '2024-25', 5);
+(151, 7, 2, 53, 22, 9, 0, '2025-26', 5),
+(152, 7, 5, 53, 22, 9, 0, '2025-26', 5),
+(153, 7, 5, 54, 22, 9, 0, '2025-26', 5),
+(154, 7, 4, 57, 22, 9, 0, '2025-26', 5),
+(155, 7, 4, 56, 23, 8, 0, '2025-26', 5),
+(156, 7, 6, 57, 23, 8, 0, '2025-26', 5),
+(157, 7, 6, 53, 23, 8, 0, '2025-26', 5),
+(158, 7, 4, 53, 23, 8, 0, '2025-26', 5),
+(159, 7, 3, 57, 24, 7, 0, '2025-26', 5),
+(160, 7, 5, 57, 24, 7, 0, '2025-26', 5),
+(161, 7, 3, 53, 24, 7, 0, '2025-26', 5),
+(162, 7, 4, 54, 24, 7, 0, '2025-26', 5),
+(163, 7, 3, 54, 25, 6, 0, '2025-26', 5),
+(164, 7, 2, 56, 25, 6, 0, '2025-26', 5),
+(165, 7, 2, 57, 25, 6, 0, '2025-26', 5),
+(166, 7, 6, 54, 25, 6, 0, '2025-26', 5),
+(167, 7, 2, 54, 26, 5, 0, '2025-26', 5),
+(168, 7, 1, 54, 26, 5, 0, '2025-26', 5),
+(169, 7, 3, 56, 26, 5, 0, '2025-26', 5),
+(170, 7, 1, 56, 26, 5, 0, '2025-26', 5),
+(171, 7, 1, 57, 27, 6, 0, '2025-26', 5),
+(172, 7, 6, 56, NULL, NULL, 0, '2025-26', 5),
+(173, 7, 1, 53, NULL, NULL, 0, '2025-26', 5),
+(174, 7, 5, 56, NULL, NULL, 0, '2025-26', 5),
+(175, 7, 1, 55, NULL, NULL, 0, '2025-26', 5),
+(176, 7, 2, 55, NULL, NULL, 0, '2025-26', 5),
+(177, 7, 3, 55, NULL, NULL, 0, '2025-26', 5),
+(178, 7, 4, 55, NULL, NULL, 0, '2025-26', 5),
+(179, 7, 5, 55, NULL, NULL, 0, '2025-26', 5),
+(180, 7, 6, 55, NULL, NULL, 0, '2025-26', 5);
 
 -- --------------------------------------------------------
 
@@ -261,11 +276,11 @@ CREATE TABLE `time_slots` (
 --
 
 INSERT INTO `time_slots` (`id`, `class_id`, `slot_number`, `start_time`, `end_time`, `day_type`, `is_break`) VALUES
-(47, 5, 1, '09:00:00', '10:00:00', 'weekday', 0),
-(48, 5, 2, '10:00:00', '11:00:00', 'weekday', 0),
-(49, 5, 3, '11:00:00', '11:30:00', 'weekday', 1),
-(50, 5, 4, '11:30:00', '12:30:00', 'weekday', 0),
-(51, 5, 5, '12:30:00', '13:30:00', 'weekday', 0);
+(53, 7, 1, '09:00:00', '10:00:00', 'weekday', 0),
+(54, 7, 2, '10:00:00', '11:00:00', 'weekday', 0),
+(55, 7, 3, '11:00:00', '11:30:00', 'weekday', 1),
+(56, 7, 4, '11:30:00', '12:30:00', 'weekday', 0),
+(57, 7, 5, '12:30:00', '13:30:00', 'weekday', 0);
 
 -- --------------------------------------------------------
 
@@ -294,7 +309,8 @@ INSERT INTO `users` (`id`, `username`, `password`, `email`, `full_name`, `role`,
 (10, 'raashi', '1', 'raashi@gmail.com', 'Raashi', 'teacher', '2026-03-21 07:07:41'),
 (11, 'rajesh', '1', 'rajesh@gmail.com', 'Rajesh Singh', 'teacher', '2026-03-21 07:12:35'),
 (12, 'mehta', '1', 'mehta@gmail.com', 'Priya Mehta', 'teacher', '2026-03-21 07:13:15'),
-(14, 'ST-rahul', '1', 'rahul@gmail.com', 'Rahul Kumar', 'student', '2026-03-21 07:18:28');
+(15, 'T-sunita', '1', 'sunita@gmail.com', 'Sunita Desai', 'teacher', '2026-03-22 07:51:31'),
+(16, 'ST-rahul', '1', 'rahul@gmail.com', 'Rahul kumar', 'student', '2026-03-22 07:53:18');
 
 --
 -- Indexes for dumped tables
@@ -395,61 +411,61 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `classes`
 --
 ALTER TABLE `classes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `leave_requests`
 --
 ALTER TABLE `leave_requests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `modify_requests`
 --
 ALTER TABLE `modify_requests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `students`
 --
 ALTER TABLE `students`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `subjects`
 --
 ALTER TABLE `subjects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT for table `teachers`
 --
 ALTER TABLE `teachers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `teacher_subjects`
 --
 ALTER TABLE `teacher_subjects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `timetable`
 --
 ALTER TABLE `timetable`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=181;
 
 --
 -- AUTO_INCREMENT for table `time_slots`
 --
 ALTER TABLE `time_slots`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- Constraints for dumped tables

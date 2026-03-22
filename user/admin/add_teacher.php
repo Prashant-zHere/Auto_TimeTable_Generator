@@ -3,7 +3,7 @@ session_start();
 require_once '../../include/conn/conn.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
@@ -262,7 +262,7 @@ $full_name = $_SESSION['full_name'];
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item ">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -290,7 +290,7 @@ $full_name = $_SESSION['full_name'];
 
             <div class="nav-section">
                 <div class="nav-section-title">ADD NEW</div>
-                <a href="add_teacher.php" class="nav-item yellow">
+                <a href="add_teacher.php" class="nav-item yellow active">
                     <span class="icon">➕</span>
                     Add Teacher
                 </a>
@@ -388,7 +388,6 @@ $full_name = $_SESSION['full_name'];
             <?php endif; ?>
 
             <form method="post" action="">
-                <!-- Personal Information -->
                 <div class="form-group">
                     <label class="required-field">👤 FULL NAME</label>
                     <input type="text" name="full_name" placeholder="Enter teacher's full name" required 
@@ -420,7 +419,6 @@ $full_name = $_SESSION['full_name'];
                     </div>
                 </div>
 
-                <!-- Professional Information -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>🏢 DEPARTMENT</label>
@@ -461,7 +459,6 @@ $full_name = $_SESSION['full_name'];
                     </div>
                 </div>
 
-                <!-- Additional Information -->
                 <div class="form-group">
                     <label>📝 SPECIALIZATION</label>
                     <input type="text" name="specialization" placeholder="e.g., Database Systems, Networks" 

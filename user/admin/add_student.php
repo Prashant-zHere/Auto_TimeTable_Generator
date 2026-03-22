@@ -2,17 +2,14 @@
 session_start();
 require_once '../../include/conn/conn.php';
 
-
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
 $error = '';
 $success = '';
 
-// Fetch classes for dropdown
 $classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes ORDER BY class_name");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_student'])) {
@@ -28,24 +25,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_student'])) {
     if (empty($full_name) || empty($email) || empty($username) || empty($password) || empty($student_id)) {
         $error = 'Please fill all required fields.';
     } else {
-        // Check if username or email exists
         $check = mysqli_query($conn, "SELECT id FROM users WHERE username='$username' OR email='$email'");
         if (mysqli_num_rows($check) > 0) {
             $error = 'Username or email already exists.';
         } else {
-            // Check if student ID already exists
             $check_student = mysqli_query($conn, "SELECT id FROM students WHERE student_id='$student_id'");
             if (mysqli_num_rows($check_student) > 0) {
                 $error = 'Student ID already exists.';
             } else {
-                // Insert into users table
                 $insert_user = "INSERT INTO users (username, password, email, full_name, role) 
                                VALUES ('$username', '$password', '$email', '$full_name', 'student')";
                 
                 if (mysqli_query($conn, $insert_user)) {
                     $user_id = mysqli_insert_id($conn);
                     
-                    // Insert into students table
                     $insert_student = "INSERT INTO students (user_id, student_id, class_id, semester, roll_number) 
                                      VALUES ($user_id, '$student_id', $class_id, $semester, '$roll_number')";
                     
@@ -293,7 +286,7 @@ $full_name = $_SESSION['full_name'];
                     <span class="icon">➕</span>
                     Add Teacher
                 </a>
-                <a href="add_student.php" class="nav-item yellow">
+                <a href="add_student.php" class="nav-item yellow active">
                     <span class="icon">➕</span>
                     Add Student
                 </a>
@@ -301,7 +294,7 @@ $full_name = $_SESSION['full_name'];
                     <span class="icon">➕</span>
                     Add Class
                 </a>
-                <a href="add_subject.php" class="nav-item yellow active">
+                <a href="add_subject.php" class="nav-item yellow">
                     <span class="icon">➕</span>
                     Add Subject
                 </a>

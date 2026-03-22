@@ -29,8 +29,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login']))
 
                 switch ($user['role']) {
                     case 'admin':   header('Location: ./user/admin/dashboard.php'); exit;
-                    case 'teacher': header('Location: teacher/dashboard.php'); exit;
-                    case 'student': header('Location: student/timetable.php'); exit;
+                    case 'teacher': header('Location: ./user/teacher/dashboard.php'); exit;
+                    case 'student': header('Location: ./user/student/dashboard.php'); exit;
                 }
             } 
             else 
@@ -99,15 +99,10 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login']))
 
         <button class="login-btn" type="submit" name="login">LOGIN →</button>
 
-        <div class="register-student">
+        <!-- <div class="register-student">
           <a href="register.php">📝 Register as student</a>
-        </div>
+        </div> -->
       </form>
-
-      <div class="info-text">
-        ⚡ teacher: request modify / apply leave<br>
-        ⚡ admin: add teachers, subjects, classes, lock & regenerate
-      </div>
     </div>
   </section>
 

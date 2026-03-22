@@ -2,16 +2,14 @@
 session_start();
 require_once '../../include/conn/conn.php';
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
 $error = '';
 $success = '';
 
-// Get subject ID from URL
 $subject_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($subject_id == 0) {
@@ -19,7 +17,6 @@ if ($subject_id == 0) {
     exit;
 }
 
-// Fetch subject details with class and teacher info
 $subject_query = mysqli_query($conn, "
     SELECT s.*, c.class_name, t.id as teacher_id, u.full_name as teacher_name
     FROM subjects s
@@ -36,10 +33,8 @@ if (!$subject) {
     exit;
 }
 
-// Fetch classes for dropdown
 $classes = mysqli_query($conn, "SELECT id, class_name, semester FROM classes ORDER BY class_name");
 
-// Fetch teachers for dropdown
 $teachers = mysqli_query($conn, "
     SELECT t.id, u.full_name, t.employee_id 
     FROM teachers t 
@@ -47,7 +42,6 @@ $teachers = mysqli_query($conn, "
     ORDER BY u.full_name
 ");
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_subject'])) {
     $subject_code = trim($_POST['subject_code']);
     $subject_name = trim($_POST['subject_name']);
@@ -63,7 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_subject'])) {
     if (empty($subject_code) || empty($subject_name) || empty($class_id) || empty($semester)) {
         $error = 'Please fill all required fields.';
     } else {
-        // Check if subject code exists for other subjects
         $check = mysqli_query($conn, "SELECT id FROM subjects WHERE subject_code='$subject_code' AND id != $subject_id");
         if (mysqli_num_rows($check) > 0) {
             $error = 'Subject code already exists.';
@@ -83,7 +76,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_subject'])) {
             
             if (mysqli_query($conn, $update)) {
                 $success = 'Subject updated successfully!';
-                // Refresh subject data
                 $subject_query = mysqli_query($conn, "
                     SELECT s.*, c.class_name, t.id as teacher_id, u.full_name as teacher_name
                     FROM subjects s
@@ -101,7 +93,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_subject'])) {
 }
 
 $full_name = $_SESSION['full_name'];
-
 
 $pending_leaves = mysqli_fetch_assoc(mysqli_query($conn, 
     "SELECT COUNT(*) as count FROM leave_requests WHERE status='pending'"
@@ -319,7 +310,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
         <div class="nav-menu">
             <div class="nav-section">
                 <div class="nav-section-title">MAIN</div>
-                <a href="dashboard.php" class="nav-item active">
+                <a href="dashboard.php" class="nav-item">
                     <span class="icon">📊</span>
                     Dashboard
                 </a>
@@ -339,7 +330,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
                     <span class="icon">🏫</span>
                     Classes
                 </a>
-                <a href="subjects.php" class="nav-item">
+                <a href="subjects.php" class="nav-item active">
                     <span class="icon">📚</span>
                     Subjects
                 </a>
