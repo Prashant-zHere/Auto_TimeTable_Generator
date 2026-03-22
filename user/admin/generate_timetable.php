@@ -109,10 +109,8 @@ function getSubjectWeeklyCount($conn, $subject_id, $class_id) {
 }
 
 function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
-    // Clear existing timetable for this class only
     mysqli_query($conn, "DELETE FROM timetable WHERE class_id = $class_id AND semester = $semester AND academic_year = '$academic_year'");
     
-    // Get subjects for this class
     $subjects = mysqli_query($conn, "
         SELECT s.*, COALESCE(ts.teacher_id, s.teacher_id) as teacher_id
         FROM subjects s 
@@ -125,7 +123,6 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
         return ['success' => false, 'message' => 'No subjects found for this class. Please add subjects first.'];
     }
     
-    // Get time slots for this class (excluding breaks)
     $slots = mysqli_query($conn, "
         SELECT * FROM time_slots 
         WHERE class_id = $class_id 
@@ -137,7 +134,6 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
         return ['success' => false, 'message' => 'No time slots defined for this class. Please add time slots first.'];
     }
     
-    // Get break slots separately
     $break_slots = mysqli_query($conn, "
         SELECT * FROM time_slots 
         WHERE class_id = $class_id 
@@ -148,7 +144,6 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
     $days = [1, 2, 3, 4, 5, 6];
     $day_names = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     
-    // Store subjects with their requirements
     $subject_list = [];
     $total_periods_needed = 0;
     
@@ -164,22 +159,18 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
         $total_periods_needed += $sub['periods_per_week'];
     }
     
-    // Get all non-break slots per day
     $slot_list = [];
     while($slot = mysqli_fetch_assoc($slots)) {
         $slot_list[] = $slot;
     }
     
-    // Calculate total available slots
     $available_slots_per_day = count($slot_list);
     $total_available = $available_slots_per_day * 6; // 6 days
     
-    // Check if we have enough slots
     if ($total_available < $total_periods_needed) {
         return ['success' => false, 'message' => "Not enough time slots! Need $total_periods_needed periods but only $total_available slots available. Please add more time slots."];
     }
     
-    // Track teacher schedule across all classes
     $teacher_schedule = [];
     $existing_schedules = mysqli_query($conn, "
         SELECT teacher_id, day_of_week, slot_id 
@@ -193,15 +184,12 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
         $teacher_schedule[$existing['teacher_id']][$existing['day_of_week']][$existing['slot_id']] = true;
     }
     
-    // Track daily teacher count for THIS class
     $daily_teacher_count = [];
     
-    // Create all possible period slots
     $all_periods = [];
     foreach($days as $day) {
         $is_saturday = ($day == 6);
         foreach($slot_list as $slot) {
-            // Check if slot is valid for this day
             if ($is_saturday) {
                 if ($slot['day_type'] == 'saturday' || $slot['day_type'] == 'weekday') {
                     $all_periods[] = [
@@ -220,7 +208,6 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
         }
     }
     
-    // Shuffle periods for random distribution
     shuffle($all_periods);
     
     $inserted = 0;
@@ -228,29 +215,23 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
     $conflicts_skipped = 0;
     $allocation_log = [];
     
-    // Create a copy of subjects for allocation
     $remaining_subjects = $subject_list;
     
-    // Sort subjects by periods_per_week (highest first)
     usort($remaining_subjects, function($a, $b) {
         return $b['periods_per_week'] - $a['periods_per_week'];
     });
     
-    // Allocate periods to subjects
     foreach($all_periods as $period) {
         $day = $period['day'];
         $slot = $period['slot'];
         $slot_id = $slot['id'];
         
-        // Find a subject that still needs periods
         $selected_subject = null;
         $selected_index = -1;
         
-        // Try to allocate subjects that still need periods
         for($i = 0; $i < count($remaining_subjects); $i++) {
             $sub = $remaining_subjects[$i];
             
-            // Check if subject still needs periods
             if ($sub['allocated'] >= $sub['periods_per_week']) {
                 continue;
             }
@@ -258,9 +239,7 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
             $teacher_id = $sub['teacher_id'];
             $can_assign = true;
             
-            // Check teacher availability
             if ($teacher_id) {
-                // Check teacher's daily limit for THIS class
                 $current_daily = isset($daily_teacher_count[$teacher_id][$day]) ? $daily_teacher_count[$teacher_id][$day] : 0;
                 $max_allowed = getTeacherMaxPeriods($conn, $teacher_id);
                 
@@ -268,7 +247,6 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
                     $can_assign = false;
                 }
                 
-                // Check teacher conflict with other classes
                 if ($can_assign && isset($teacher_schedule[$teacher_id][$day][$slot_id])) {
                     $can_assign = false;
                     $conflicts_skipped++;
@@ -283,13 +261,10 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
         }
         
         if ($selected_subject) {
-            // Allocate this subject to the period
             $teacher_id = $selected_subject['teacher_id'];
             
-            // Update allocation
             $remaining_subjects[$selected_index]['allocated']++;
             
-            // Update daily teacher count
             if ($teacher_id) {
                 if (!isset($daily_teacher_count[$teacher_id])) {
                     $daily_teacher_count[$teacher_id] = [];
@@ -299,11 +274,9 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
                 }
                 $daily_teacher_count[$teacher_id][$day]++;
                 
-                // Update global teacher schedule
                 $teacher_schedule[$teacher_id][$day][$slot_id] = true;
             }
             
-            // Insert into timetable
             $teacher_id_val = $teacher_id ? $teacher_id : 'NULL';
             $insert = "INSERT INTO timetable 
                       (class_id, day_of_week, slot_id, subject_id, teacher_id, academic_year, semester, is_locked) 
@@ -315,7 +288,6 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
                 $allocation_log[] = "Day {$day_names[$day]}: Slot {$slot['slot_number']} - {$selected_subject['code']} ({$selected_subject['name']})";
             }
         } else {
-            // No subject available for this slot, leave empty
             $insert = "INSERT INTO timetable 
                       (class_id, day_of_week, slot_id, subject_id, teacher_id, academic_year, semester, is_locked) 
                       VALUES 
@@ -325,7 +297,6 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
         }
     }
     
-    // Insert break slots
     $break_slot_list = [];
     while($break = mysqli_fetch_assoc($break_slots)) {
         $break_slot_list[] = $break;
@@ -358,7 +329,6 @@ function generateAutoTimetable($conn, $class_id, $semester, $academic_year) {
         }
     }
     
-    // Check allocation results
     $unfulfilled = [];
     $over_allocated = [];
     $total_allocated = 0;
@@ -456,7 +426,6 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
     <title>Generate Timetable · Admin</title>
     <link rel="stylesheet" href="../../include/css/style.css">
     <style>
-        /* Keep all existing styles */
         * {
             margin: 0;
             padding: 0;
@@ -1036,7 +1005,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
             <div class="form-container">
                 <h2>⚙️ GENERATION SETTINGS</h2>
                 
-                <div class="break-info">
+                <!-- <div class="break-info">
                     <span class="icon">🍽️</span>
                     <span><strong>Break slots detected:</strong> Break periods will be automatically marked and will not have subjects assigned.</span>
                 </div>
@@ -1048,7 +1017,7 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
                     • Teachers cannot be scheduled in multiple classes at the same time<br>
                     • Teacher's daily period limit is respected across ALL classes<br>
                     • Break slots are automatically skipped
-                </div>
+                </div> -->
                 
                 <form method="post" action="" id="generationForm">
                     <div class="form-group">
@@ -1114,22 +1083,22 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
                         $total_non_break = $stat['period_count'] - $stat['break_count'];
                         $filled_percentage = $total_non_break > 0 ? round(($stat['filled_count'] / $total_non_break) * 100) : 0;
                         
-                        if ($filled_percentage == 100) {
-                            $status_class = 'complete';
-                            $status_message = '✅ Fully Generated';
-                        } elseif ($filled_percentage >= 75) {
-                            $status_class = 'partial';
-                            $status_message = '⚡ Good Progress';
-                        } elseif ($filled_percentage >= 50) {
-                            $status_class = 'partial';
-                            $status_message = '📊 Partial Generation';
-                        } elseif ($filled_percentage > 0) {
-                            $status_class = 'low';
-                            $status_message = '⚠️ Needs Attention';
-                        } else {
-                            $status_class = 'low';
-                            $status_message = '❌ Not Generated';
-                        }
+                        // if ($filled_percentage == 100) {
+                        //     $status_class = 'complete';
+                        //     $status_message = '✅ Fully Generated';
+                        // } elseif ($filled_percentage >= 75) {
+                        //     $status_class = 'partial';
+                        //     $status_message = '⚡ Good Progress';
+                        // } elseif ($filled_percentage >= 50) {
+                        //     $status_class = 'partial';
+                        //     $status_message = '📊 Partial Generation';
+                        // } elseif ($filled_percentage > 0) {
+                        //     $status_class = 'low';
+                        //     $status_message = '⚠️ Needs Attention';
+                        // } else {
+                        //     $status_class = 'low';
+                        //     $status_message = '❌ Not Generated';
+                        // }
                         ?>
                         <div class="class-status">
                             <div class="class-status-header">
@@ -1157,10 +1126,10 @@ $pending_modifies = mysqli_fetch_assoc(mysqli_query($conn,
                                 <span>100%</span>
                             </div>
                             
-                            <div class="completion-status <?php echo $status_class; ?>">
+                            <!-- <div class="completion-status <?php echo $status_class; ?>">
                                 <?php echo $status_message; ?> 
                                 (<?php echo $stat['filled_count']; ?> out of <?php echo $total_non_break; ?> non-break periods filled)
-                            </div>
+                            </div> -->
                         </div>
                     <?php endforeach; ?>
                 <?php else: ?>
